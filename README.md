@@ -168,6 +168,20 @@ _Atualizar esta seção ao longo do desenvolvimento com funcionalidades incomple
 4. Garantir que o código passa no lint e na verificação de tipos antes de solicitar revisão.
 5. Aguardar revisão de ao menos um integrante antes do merge.
 
+## 👥 Integrantes
+
+| Nome |
+|------|
+|   Bianca Nunes   |
+|   Eloisa Lopes   |
+|   Julia Harumi   |
+|   Lauren Reis    |
+|   Paola Costa    |
+|   Paola Oliveira |
+|   Sara Roza      |
+|   Vitor Fogaça   |
+
+
 ## Licença
 
 Projeto acadêmico — uso restrito à disciplina e à instituição de ensino.
