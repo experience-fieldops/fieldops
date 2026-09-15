@@ -25,6 +25,7 @@ import com.experiencefieldops.api.entities.InspectionTemplateVersion;
 import com.experiencefieldops.api.entities.TemplateItem;
 import com.experiencefieldops.api.entities.TemplateSection;
 import com.experiencefieldops.api.entities.User;
+import com.experiencefieldops.api.enums.AuditAction;
 import com.experiencefieldops.api.enums.ClientStatus;
 import com.experiencefieldops.api.enums.EquipmentStatus;
 import com.experiencefieldops.api.enums.InspectionStatus;
@@ -40,6 +41,7 @@ import com.experiencefieldops.api.repositories.InspectionTemplateVersionReposito
 import com.experiencefieldops.api.repositories.TemplateItemRepository;
 import com.experiencefieldops.api.repositories.TemplateSectionRepository;
 import com.experiencefieldops.api.repositories.UserRepository;
+import com.experiencefieldops.api.services.AuditLogService;
 import com.experiencefieldops.api.services.InspectionService;
 
 import lombok.RequiredArgsConstructor;
@@ -57,6 +59,7 @@ public class InspectionServiceImpl implements InspectionService {
     private final EquipmentRepository equipmentRepository;
     private final TemplateSectionRepository sectionRepository;
     private final TemplateItemRepository itemRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -67,26 +70,23 @@ public class InspectionServiceImpl implements InspectionService {
         InspectionTemplateVersion templateVersion = findPublishedVersion(request.getTemplateVersionId());
         Equipment equipment = resolveEquipment(request.getEquipmentId());
 
-        // Valida compatibilidade local ↔ equipamento (RN-014)
         if (equipment != null && !equipment.getSite().getId().equals(site.getId())) {
-            throw new IllegalArgumentException(
-                    "Equipamento não pertence ao local selecionado (RN-014)");
+            throw new IllegalArgumentException("Equipamento não pertence ao local selecionado (RN-014)");
         }
 
         Inspection inspection = Inspection.builder()
-                .client(client)
-                .site(site)
-                .assignedTo(technician)
-                .templateVersion(templateVersion)
-                .equipment(equipment)
+                .client(client).site(site).assignedTo(technician)
+                .templateVersion(templateVersion).equipment(equipment)
                 .scheduledDate(request.getScheduledDate())
                 .status(InspectionStatus.SCHEDULED)
                 .build();
 
         Inspection saved = inspectionRepository.save(inspection);
-
-        // Gera snapshot de todos os itens da versão (RN-021)
         generateSnapshots(saved, templateVersion);
+
+        auditLogService.log(null, "system", AuditAction.CREATE,
+                "Inspection", saved.getId(),
+                "Criada para técnico id=" + technician.getId());
 
         List<InspectionItemSnapshotResponse> snapshots = loadSnapshots(saved.getId());
         return InspectionResponse.from(saved, snapshots);
@@ -96,29 +96,26 @@ public class InspectionServiceImpl implements InspectionService {
     @Transactional(readOnly = true)
     public Page<InspectionResponse> findAll(Long technicianId, Long clientId,
             InspectionStatus status, Pageable pageable) {
-
         Specification<Inspection> spec = Specification
                 .where(hasTechnician(technicianId))
                 .and(hasClient(clientId))
                 .and(hasStatus(status));
-
-        return inspectionRepository.findAll(spec, pageable)
-                .map(InspectionResponse::from);
+        return inspectionRepository.findAll(spec, pageable).map(InspectionResponse::from);
     }
 
     @Override
     @Transactional(readOnly = true)
     public InspectionResponse findById(Long id) {
         Inspection inspection = findInspection(id);
-        List<InspectionItemSnapshotResponse> snapshots = loadSnapshots(id);
-        return InspectionResponse.from(inspection, snapshots);
+        return InspectionResponse.from(inspection, loadSnapshots(id));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Page<InspectionResponse> findAssigned(Long technicianId, Pageable pageable) {
-        Specification<Inspection> spec = Specification.where(hasTechnician(technicianId));
-        return inspectionRepository.findAll(spec, pageable).map(InspectionResponse::from);
+        return inspectionRepository
+                .findAll(Specification.where(hasTechnician(technicianId)), pageable)
+                .map(InspectionResponse::from);
     }
 
     @Override
@@ -126,13 +123,10 @@ public class InspectionServiceImpl implements InspectionService {
     public InspectionResponse start(Long id, InspectionStartRequest request, Long requestingUserId) {
         Inspection inspection = findInspection(id);
 
-        // RN-032: somente SCHEDULED pode ser iniciada
         if (inspection.getStatus() != InspectionStatus.SCHEDULED) {
-            throw new ConflictException("Somente inspeções agendadas podem ser iniciadas (RN-032). Status atual: "
+            throw new ConflictException("Somente inspeções agendadas podem ser iniciadas (RN-032). Status: "
                     + inspection.getStatus());
         }
-
-        // RN-033: somente o técnico responsável pode iniciar
         if (!inspection.getAssignedTo().getId().equals(requestingUserId)) {
             throw new ConflictException("Somente o técnico responsável pode iniciar a inspeção (RN-033)");
         }
@@ -141,7 +135,12 @@ public class InspectionServiceImpl implements InspectionService {
         inspection.setStartedAtDevice(request.getStartedAtDevice());
         inspection.setStartedAtServer(LocalDateTime.now());
 
-        return InspectionResponse.from(inspectionRepository.save(inspection));
+        Inspection saved = inspectionRepository.save(inspection);
+
+        auditLogService.log(requestingUserId, inspection.getAssignedTo().getName(),
+                AuditAction.STATUS_CHANGE, "Inspection", id, "Iniciada pelo técnico");
+
+        return InspectionResponse.from(saved);
     }
 
     @Override
@@ -149,13 +148,10 @@ public class InspectionServiceImpl implements InspectionService {
     public InspectionResponse complete(Long id, InspectionCompleteRequest request, Long requestingUserId) {
         Inspection inspection = findInspection(id);
 
-        // Somente IN_PROGRESS pode ser concluída
         if (inspection.getStatus() != InspectionStatus.IN_PROGRESS) {
-            throw new ConflictException("Somente inspeções em andamento podem ser concluídas. Status atual: "
+            throw new ConflictException("Somente inspeções em andamento podem ser concluídas. Status: "
                     + inspection.getStatus());
         }
-
-        // RN-033: somente o técnico responsável
         if (!inspection.getAssignedTo().getId().equals(requestingUserId)) {
             throw new ConflictException("Somente o técnico responsável pode concluir a inspeção (RN-033)");
         }
@@ -164,7 +160,12 @@ public class InspectionServiceImpl implements InspectionService {
         inspection.setCompletedAtDevice(request.getCompletedAtDevice());
         inspection.setCompletedAtServer(LocalDateTime.now());
 
-        return InspectionResponse.from(inspectionRepository.save(inspection));
+        Inspection saved = inspectionRepository.save(inspection);
+
+        auditLogService.log(requestingUserId, inspection.getAssignedTo().getName(),
+                AuditAction.STATUS_CHANGE, "Inspection", id, "Concluída pelo técnico");
+
+        return InspectionResponse.from(saved);
     }
 
     @Override
@@ -172,12 +173,9 @@ public class InspectionServiceImpl implements InspectionService {
     public InspectionResponse cancel(Long id, InspectionCancelRequest request, Long requestingUserId) {
         Inspection inspection = findInspection(id);
 
-        // RN-030: inspeção aprovada não pode ser cancelada pelo fluxo comum
         if (inspection.getStatus() == InspectionStatus.APPROVED) {
             throw new ConflictException("Inspeção aprovada não pode ser cancelada pelo fluxo comum (RN-030)");
         }
-
-        // Não faz sentido cancelar o que já está cancelado
         if (inspection.getStatus() == InspectionStatus.CANCELLED) {
             throw new ConflictException("Inspeção já está cancelada");
         }
@@ -190,7 +188,13 @@ public class InspectionServiceImpl implements InspectionService {
         inspection.setCancelledAt(LocalDateTime.now());
         inspection.setCancellationReason(request.getReason());
 
-        return InspectionResponse.from(inspectionRepository.save(inspection));
+        Inspection saved = inspectionRepository.save(inspection);
+
+        auditLogService.log(requestingUserId, canceller.getName(),
+                AuditAction.CANCEL, "Inspection", id,
+                "Cancelada — motivo: " + request.getReason());
+
+        return InspectionResponse.from(saved);
     }
 
     // ── snapshot ──────────────────────────────────────────────────────────────
@@ -198,19 +202,13 @@ public class InspectionServiceImpl implements InspectionService {
     private void generateSnapshots(Inspection inspection, InspectionTemplateVersion version) {
         List<TemplateSection> sections = sectionRepository
                 .findByTemplateVersionIdOrderByDisplayOrder(version.getId());
-
         for (TemplateSection section : sections) {
-            List<TemplateItem> items = itemRepository
-                    .findBySectionIdOrderByDisplayOrder(section.getId());
-
+            List<TemplateItem> items = itemRepository.findBySectionIdOrderByDisplayOrder(section.getId());
             for (TemplateItem item : items) {
-                InspectionItemSnapshot snapshot = InspectionItemSnapshot.builder()
-                        .inspection(inspection)
-                        .originalItem(item)
-                        .code(item.getCode())
-                        .title(item.getTitle())
-                        .description(item.getDescription())
-                        .responseType(item.getResponseType())
+                snapshotRepository.save(InspectionItemSnapshot.builder()
+                        .inspection(inspection).originalItem(item)
+                        .code(item.getCode()).title(item.getTitle())
+                        .description(item.getDescription()).responseType(item.getResponseType())
                         .required(item.getRequired())
                         .observationRequiredOnFailure(item.getObservationRequiredOnFailure())
                         .evidenceRequiredOnFailure(item.getEvidenceRequiredOnFailure())
@@ -218,8 +216,7 @@ public class InspectionServiceImpl implements InspectionService {
                         .sectionTitle(section.getTitle())
                         .sectionDisplayOrder(section.getDisplayOrder())
                         .itemDisplayOrder(item.getDisplayOrder())
-                        .build();
-                snapshotRepository.save(snapshot);
+                        .build());
             }
         }
     }
@@ -227,9 +224,7 @@ public class InspectionServiceImpl implements InspectionService {
     private List<InspectionItemSnapshotResponse> loadSnapshots(Long inspectionId) {
         return snapshotRepository
                 .findByInspectionIdOrderBySectionDisplayOrderAscItemDisplayOrderAsc(inspectionId)
-                .stream()
-                .map(InspectionItemSnapshotResponse::from)
-                .collect(Collectors.toList());
+                .stream().map(InspectionItemSnapshotResponse::from).collect(Collectors.toList());
     }
 
     // ── validações ────────────────────────────────────────────────────────────
@@ -237,52 +232,44 @@ public class InspectionServiceImpl implements InspectionService {
     private Client findActiveClient(Long id) {
         Client client = clientRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Client", id));
-        if (client.getStatus() == ClientStatus.INACTIVE) {
-            throw new IllegalArgumentException("Cliente inativo não pode ser selecionado em novos agendamentos (RN-013)");
-        }
+        if (client.getStatus() == ClientStatus.INACTIVE)
+            throw new IllegalArgumentException("Cliente inativo (RN-013)");
         return client;
     }
 
     private InspectionSite findActiveSite(Long id) {
         InspectionSite site = siteRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("InspectionSite", id));
-        if (site.getStatus() == SiteStatus.INACTIVE) {
-            throw new IllegalArgumentException("Local inativo não pode ser selecionado em novos agendamentos");
-        }
+        if (site.getStatus() == SiteStatus.INACTIVE)
+            throw new IllegalArgumentException("Local inativo");
         return site;
     }
 
     private User findActiveTechnician(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
-        if (Boolean.FALSE.equals(user.getActive())) {
-            throw new IllegalArgumentException("Somente técnico ativo pode receber nova atribuição (RN-027)");
-        }
+        if (Boolean.FALSE.equals(user.getActive()))
+            throw new IllegalArgumentException("Técnico inativo (RN-027)");
         return user;
     }
 
     private InspectionTemplateVersion findPublishedVersion(Long id) {
-        InspectionTemplateVersion version = versionRepository.findById(id)
+        InspectionTemplateVersion v = versionRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("TemplateVersion", id));
-        // Versão publicada = publishedAt preenchido e activeForNewInspections = true (RN-024)
-        if (version.getPublishedAt() == null) {
-            throw new IllegalArgumentException("A versão do modelo ainda não foi publicada (RN-024)");
-        }
-        if (Boolean.FALSE.equals(version.getActiveForNewInspections())) {
-            throw new IllegalArgumentException("Esta versão do modelo não está disponível para novos agendamentos (RN-024)");
-        }
-        return version;
+        if (v.getPublishedAt() == null)
+            throw new IllegalArgumentException("Versão do modelo não publicada (RN-024)");
+        if (Boolean.FALSE.equals(v.getActiveForNewInspections()))
+            throw new IllegalArgumentException("Versão desativada para novos agendamentos (RN-024)");
+        return v;
     }
 
-    private Equipment resolveEquipment(Long equipmentId) {
-        if (equipmentId == null) return null;
-        Equipment equipment = equipmentRepository.findByIdAndDeletedAtIsNull(equipmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Equipment", equipmentId));
-        if (equipment.getStatus() == EquipmentStatus.INACTIVE
-                || equipment.getStatus() == EquipmentStatus.DECOMMISSIONED) {
-            throw new IllegalArgumentException("Equipamento inativo não pode ser usado em nova inspeção (RN-012)");
-        }
-        return equipment;
+    private Equipment resolveEquipment(Long id) {
+        if (id == null) return null;
+        Equipment eq = equipmentRepository.findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Equipment", id));
+        if (eq.getStatus() == EquipmentStatus.INACTIVE || eq.getStatus() == EquipmentStatus.DECOMMISSIONED)
+            throw new IllegalArgumentException("Equipamento inativo (RN-012)");
+        return eq;
     }
 
     private Inspection findInspection(Long id) {
@@ -290,16 +277,14 @@ public class InspectionServiceImpl implements InspectionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Inspection", id));
     }
 
-    // ── Specifications ────────────────────────────────────────────────────────
-
-    private Specification<Inspection> hasTechnician(Long technicianId) {
-        if (technicianId == null) return null;
-        return (root, query, cb) -> cb.equal(root.get("assignedTo").get("id"), technicianId);
+    private Specification<Inspection> hasTechnician(Long id) {
+        if (id == null) return null;
+        return (root, query, cb) -> cb.equal(root.get("assignedTo").get("id"), id);
     }
 
-    private Specification<Inspection> hasClient(Long clientId) {
-        if (clientId == null) return null;
-        return (root, query, cb) -> cb.equal(root.get("client").get("id"), clientId);
+    private Specification<Inspection> hasClient(Long id) {
+        if (id == null) return null;
+        return (root, query, cb) -> cb.equal(root.get("client").get("id"), id);
     }
 
     private Specification<Inspection> hasStatus(InspectionStatus status) {
