@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import lombok.Getter;
 
+import org.springframework.web.server.ResponseStatusException;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
