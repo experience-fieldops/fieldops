@@ -1,5 +1,4 @@
 # ER Diagram - FieldOps
-Di
 
 ```mermaid
 erDiagram
