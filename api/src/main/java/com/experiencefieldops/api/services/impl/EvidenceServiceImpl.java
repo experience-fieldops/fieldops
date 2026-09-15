@@ -18,6 +18,7 @@ import com.experiencefieldops.api.entities.Inspection;
 import com.experiencefieldops.api.entities.InspectionResponse;
 import com.experiencefieldops.api.entities.NonConformity;
 import com.experiencefieldops.api.entities.User;
+import com.experiencefieldops.api.enums.AuditAction;
 import com.experiencefieldops.api.enums.InspectionStatus;
 import com.experiencefieldops.api.exception.ForbiddenException;
 import com.experiencefieldops.api.exception.ResourceNotFoundException;
@@ -26,6 +27,7 @@ import com.experiencefieldops.api.repositories.InspectionRepository;
 import com.experiencefieldops.api.repositories.InspectionResponseRepository;
 import com.experiencefieldops.api.repositories.NonConformityRepository;
 import com.experiencefieldops.api.repositories.UserRepository;
+import com.experiencefieldops.api.services.AuditLogService;
 import com.experiencefieldops.api.services.EvidenceService;
 import com.experiencefieldops.api.services.StorageService;
 
@@ -35,10 +37,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EvidenceServiceImpl implements EvidenceService {
 
-    // Tipos de conteúdo aceitos (RN-046)
     private static final Set<String> ALLOWED_TYPES = Set.of(
-            "image/jpeg", "image/png", "image/webp", "image/heic",
-            "application/pdf"
+            "image/jpeg", "image/png", "image/webp", "image/heic", "application/pdf"
     );
 
     private final EvidenceRepository evidenceRepository;
@@ -47,8 +47,9 @@ public class EvidenceServiceImpl implements EvidenceService {
     private final NonConformityRepository ncRepository;
     private final UserRepository userRepository;
     private final StorageService storageService;
+    private final AuditLogService auditLogService;
 
-    @Value("${storage.max-size-bytes:10485760}") // 10 MB default
+    @Value("${storage.max-size-bytes:10485760}")
     private long maxFileSizeBytes;
 
     @Override
@@ -75,6 +76,11 @@ public class EvidenceServiceImpl implements EvidenceService {
                 .build();
 
         Evidence saved = evidenceRepository.save(evidence);
+
+        auditLogService.log(uploadedByUserId, null, AuditAction.UPLOAD,
+                "Evidence", saved.getId(),
+                "Upload para inspeção id=" + inspectionId);
+
         return EvidenceResponse.from(saved, storageService.getUrl(fileKey));
     }
 
@@ -83,8 +89,7 @@ public class EvidenceServiceImpl implements EvidenceService {
     public List<EvidenceResponse> findAll(Long inspectionId) {
         findInspection(inspectionId);
         return evidenceRepository.findByInspectionIdAndDeletedAtIsNull(inspectionId)
-                .stream()
-                .map(e -> EvidenceResponse.from(e, storageService.getUrl(e.getFileKey())))
+                .stream().map(e -> EvidenceResponse.from(e, storageService.getUrl(e.getFileKey())))
                 .collect(Collectors.toList());
     }
 
@@ -102,7 +107,6 @@ public class EvidenceServiceImpl implements EvidenceService {
         Evidence evidence = evidenceRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Evidence", id));
 
-        // RN-049: evidências de inspeção aprovada são somente leitura
         if (evidence.getInspection().getStatus() == InspectionStatus.APPROVED) {
             throw new ForbiddenException("Evidências de inspeção aprovada são somente leitura (RN-049)");
         }
@@ -110,53 +114,45 @@ public class EvidenceServiceImpl implements EvidenceService {
         User deletedBy = userRepository.findById(deletedByUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", deletedByUserId));
 
-        // Soft delete auditado (RN-048) — não remove o arquivo do storage imediatamente
         evidence.setDeletedAt(LocalDateTime.now());
         evidence.setDeletedBy(deletedBy);
         evidence.setDeletionReason(reason);
         evidenceRepository.save(evidence);
 
-        // Remove o arquivo do storage após soft delete
         storageService.delete(evidence.getFileKey());
+
+        auditLogService.log(deletedByUserId, deletedBy.getName(), AuditAction.DELETE,
+                "Evidence", id, "Removida — motivo: " + reason);
     }
 
     // ── validações ────────────────────────────────────────────────────────────
 
     private void validateFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
+        if (file == null || file.isEmpty())
             throw new IllegalArgumentException("Arquivo não pode ser vazio");
-        }
 
-        // RN-046: tipo de arquivo permitido
         String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase())) {
+        if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase()))
             throw new ResponseStatusException(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                    "Tipo de arquivo não suportado: " + contentType
-                            + ". Permitidos: JPEG, PNG, WEBP, HEIC, PDF");
-        }
+                    "Tipo não suportado: " + contentType + ". Permitidos: JPEG, PNG, WEBP, HEIC, PDF");
 
-        // RN-046: tamanho máximo
-        if (file.getSize() > maxFileSizeBytes) {
+        if (file.getSize() > maxFileSizeBytes)
             throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
-                    "Arquivo excede o tamanho máximo permitido de "
-                            + (maxFileSizeBytes / 1024 / 1024) + " MB");
-        }
+                    "Arquivo excede " + (maxFileSizeBytes / 1024 / 1024) + " MB");
     }
 
     private Inspection findActiveInspection(Long inspectionId) {
         Inspection inspection = findInspection(inspectionId);
-        if (inspection.getStatus() == InspectionStatus.APPROVED) {
+        if (inspection.getStatus() == InspectionStatus.APPROVED)
             throw new ForbiddenException("Inspeção aprovada não aceita novas evidências (RN-049)");
-        }
-        if (inspection.getStatus() == InspectionStatus.CANCELLED) {
+        if (inspection.getStatus() == InspectionStatus.CANCELLED)
             throw new IllegalArgumentException("Inspeção cancelada não aceita evidências");
-        }
         return inspection;
     }
 
-    private Inspection findInspection(Long inspectionId) {
-        return inspectionRepository.findById(inspectionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Inspection", inspectionId));
+    private Inspection findInspection(Long id) {
+        return inspectionRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Inspection", id));
     }
 
     private InspectionResponse resolveResponse(Long inspectionId, Long responseId) {
