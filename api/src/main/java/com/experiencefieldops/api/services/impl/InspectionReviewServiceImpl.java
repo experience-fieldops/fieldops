@@ -14,6 +14,7 @@ import com.experiencefieldops.api.dto.ReviewResponse;
 import com.experiencefieldops.api.entities.Inspection;
 import com.experiencefieldops.api.entities.InspectionReview;
 import com.experiencefieldops.api.entities.User;
+import com.experiencefieldops.api.enums.AuditAction;
 import com.experiencefieldops.api.enums.InspectionStatus;
 import com.experiencefieldops.api.enums.ReviewDecision;
 import com.experiencefieldops.api.enums.UserRole;
@@ -23,6 +24,8 @@ import com.experiencefieldops.api.exception.ResourceNotFoundException;
 import com.experiencefieldops.api.repositories.InspectionRepository;
 import com.experiencefieldops.api.repositories.InspectionReviewRepository;
 import com.experiencefieldops.api.repositories.UserRepository;
+import com.experiencefieldops.api.services.AuditLogService;
+import com.experiencefieldops.api.services.InspectionReviewService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -33,6 +36,7 @@ public class InspectionReviewServiceImpl implements InspectionReviewService {
     private final InspectionReviewRepository reviewRepository;
     private final InspectionRepository inspectionRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -40,14 +44,12 @@ public class InspectionReviewServiceImpl implements InspectionReviewService {
         Inspection inspection = findInspection(inspectionId);
         User reviewer = findSupervisor(reviewerId);
 
-        // Somente inspeções COMPLETED podem ser revisadas
         if (inspection.getStatus() != InspectionStatus.COMPLETED) {
             throw new ConflictException(
                     "Somente inspeções concluídas podem ser revisadas. Status atual: "
                             + inspection.getStatus());
         }
 
-        // Bloqueia segunda revisão enquanto já existe uma PENDING
         if (reviewRepository.existsByInspectionIdAndDecision(inspectionId, ReviewDecision.PENDING)) {
             throw new ConflictException("Já existe uma revisão em andamento para esta inspeção");
         }
@@ -65,11 +67,16 @@ public class InspectionReviewServiceImpl implements InspectionReviewService {
                 .comment(request.getComment())
                 .build();
 
-        // Inspeção entra em UNDER_REVIEW
         inspection.setStatus(InspectionStatus.UNDER_REVIEW);
         inspectionRepository.save(inspection);
 
-        return ReviewResponse.from(reviewRepository.save(review));
+        InspectionReview saved = reviewRepository.save(review);
+
+        auditLogService.log(reviewer.getId(), reviewer.getName(),
+                AuditAction.STATUS_CHANGE, "Inspection", inspectionId,
+                "Revisão iniciada — rodada " + nextRound);
+
+        return ReviewResponse.from(saved);
     }
 
     @Override
@@ -77,9 +84,7 @@ public class InspectionReviewServiceImpl implements InspectionReviewService {
     public List<ReviewResponse> findAll(Long inspectionId) {
         findInspection(inspectionId);
         return reviewRepository.findByInspectionIdOrderByRoundNumberDesc(inspectionId)
-                .stream()
-                .map(ReviewResponse::from)
-                .collect(Collectors.toList());
+                .stream().map(ReviewResponse::from).collect(Collectors.toList());
     }
 
     @Override
@@ -101,12 +106,17 @@ public class InspectionReviewServiceImpl implements InspectionReviewService {
         review.setComment(request.getComment());
         review.setDecidedAt(LocalDateTime.now());
 
-        // Inspeção passa para APPROVED — bloqueia edição de respostas (RN-082)
         Inspection inspection = review.getInspection();
         inspection.setStatus(InspectionStatus.APPROVED);
         inspectionRepository.save(inspection);
 
-        return ReviewResponse.from(reviewRepository.save(review));
+        InspectionReview saved = reviewRepository.save(review);
+
+        auditLogService.log(reviewer.getId(), reviewer.getName(),
+                AuditAction.APPROVE, "Inspection", inspection.getId(),
+                "Aprovada na rodada " + review.getRoundNumber());
+
+        return ReviewResponse.from(saved);
     }
 
     @Override
@@ -122,24 +132,25 @@ public class InspectionReviewServiceImpl implements InspectionReviewService {
         review.setRejectionReason(request.getRejectionReason());
         review.setDecidedAt(LocalDateTime.now());
 
-        // Inspeção volta para REJECTED — técnico pode corrigir e reenviar (RN-083)
         Inspection inspection = review.getInspection();
         inspection.setStatus(InspectionStatus.REJECTED);
         inspectionRepository.save(inspection);
 
-        return ReviewResponse.from(reviewRepository.save(review));
+        InspectionReview saved = reviewRepository.save(review);
+
+        auditLogService.log(reviewer.getId(), reviewer.getName(),
+                AuditAction.REJECT, "Inspection", inspection.getId(),
+                "Reprovada na rodada " + review.getRoundNumber()
+                        + " — motivo: " + request.getRejectionReason());
+
+        return ReviewResponse.from(saved);
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
-    /**
-     * Garante que somente SUPERVISOR pode revisar (RN-079).
-     * Quando JWT estiver implementado, a role virá do token — aqui buscamos no banco.
-     */
     private User findSupervisor(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-
         if (user.getRole() != UserRole.SUPERVISOR && user.getRole() != UserRole.ADMIN) {
             throw new ForbiddenException(
                     "Somente SUPERVISOR ou ADMIN pode revisar inspeções (RN-079)");
@@ -154,10 +165,6 @@ public class InspectionReviewServiceImpl implements InspectionReviewService {
         }
     }
 
-    /**
-     * Garante que quem aprova/reprova é o mesmo supervisor que abriu a revisão.
-     * Evita que outro supervisor "roube" a revisão em andamento.
-     */
     private void assertSameReviewer(InspectionReview review, User reviewer) {
         if (!review.getReviewer().getId().equals(reviewer.getId())) {
             throw new ForbiddenException(
