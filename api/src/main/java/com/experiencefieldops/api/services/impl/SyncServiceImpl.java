@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.experiencefieldops.api.dto.InspectionCancelRequest;
 import com.experiencefieldops.api.dto.InspectionCompleteRequest;
 import com.experiencefieldops.api.dto.InspectionStartRequest;
 import com.experiencefieldops.api.dto.NonConformityRequest;
@@ -24,7 +23,6 @@ import com.experiencefieldops.api.entities.Inspection;
 import com.experiencefieldops.api.entities.SyncOutbox;
 import com.experiencefieldops.api.enums.AuditAction;
 import com.experiencefieldops.api.enums.InspectionStatus;
-import com.experiencefieldops.api.enums.SyncOperationType;
 import com.experiencefieldops.api.enums.SyncStatus;
 import com.experiencefieldops.api.exception.ResourceNotFoundException;
 import com.experiencefieldops.api.repositories.InspectionRepository;

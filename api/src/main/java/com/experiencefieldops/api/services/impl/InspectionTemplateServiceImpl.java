@@ -20,7 +20,6 @@ import com.experiencefieldops.api.entities.InspectionTemplate;
 import com.experiencefieldops.api.entities.InspectionTemplateVersion;
 import com.experiencefieldops.api.entities.TemplateSection;
 import com.experiencefieldops.api.enums.TemplateStatus;
-import com.experiencefieldops.api.exception.ConflictException;
 import com.experiencefieldops.api.exception.ResourceNotFoundException;
 import com.experiencefieldops.api.repositories.InspectionTemplateRepository;
 import com.experiencefieldops.api.repositories.InspectionTemplateVersionRepository;

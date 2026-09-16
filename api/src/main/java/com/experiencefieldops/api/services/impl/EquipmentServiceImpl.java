@@ -15,7 +15,6 @@ import com.experiencefieldops.api.entities.Equipment;
 import com.experiencefieldops.api.entities.InspectionSite;
 import com.experiencefieldops.api.enums.EquipmentStatus;
 import com.experiencefieldops.api.enums.SiteStatus;
-import com.experiencefieldops.api.exception.ConflictException;
 import com.experiencefieldops.api.exception.ResourceNotFoundException;
 import com.experiencefieldops.api.repositories.EquipmentRepository;
 import com.experiencefieldops.api.repositories.InspectionSiteRepository;

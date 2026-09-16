@@ -20,6 +20,7 @@ import com.experiencefieldops.api.exception.ResourceNotFoundException;
 import com.experiencefieldops.api.repositories.InspectionItemSnapshotRepository;
 import com.experiencefieldops.api.repositories.InspectionRepository;
 import com.experiencefieldops.api.repositories.InspectionResponseRepository;
+import com.experiencefieldops.api.services.InspectionResponseService;
 
 import lombok.RequiredArgsConstructor;
 

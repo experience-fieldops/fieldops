@@ -17,7 +17,6 @@ import com.experiencefieldops.api.dto.AuditLogResponse;
 import com.experiencefieldops.api.enums.AuditAction;
 import com.experiencefieldops.api.enums.UserRole;
 import com.experiencefieldops.api.exception.ForbiddenException;
-import com.experiencefieldops.api.exception.ResourceNotFoundException;
 import com.experiencefieldops.api.repositories.UserRepository;
 import com.experiencefieldops.api.services.AuditLogService;
 import com.experiencefieldops.api.util.ApiResponse;
