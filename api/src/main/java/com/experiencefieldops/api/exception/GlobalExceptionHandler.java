@@ -70,6 +70,30 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(400, ex.getMessage()));
     }
 
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        String message = "Requisição inválida: valor não reconhecido no corpo da requisição";
+        Throwable cause = ex.getCause();
+        if (cause instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException ife
+                && ife.getTargetType() != null && ife.getTargetType().isEnum()) {
+            message = "Valor inválido '" + ife.getValue() + "' para o campo '"
+                    + ife.getPath().get(0).getFieldName() + "'. "
+                    + "Valores aceitos: " + java.util.Arrays.toString(ife.getTargetType().getEnumConstants());
+        }
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, message));
+    }
+
+    @ExceptionHandler(org.springframework.security.authentication.DisabledException.class)
+    public ResponseEntity<ErrorResponse> handleDisabled(
+            org.springframework.security.authentication.DisabledException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(401, "Usuário inativo ou removido"));
+    }
+
     @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(
             org.springframework.security.authentication.BadCredentialsException ex) {

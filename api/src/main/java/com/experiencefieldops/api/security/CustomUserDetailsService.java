@@ -21,10 +21,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        com.experiencefieldops.api.entities.User user = userRepository.findByEmail(email)
+        com.experiencefieldops.api.entities.User user = userRepository.findByEmailAndDeletedAtIsNull(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
 
-        boolean enabled = Boolean.TRUE.equals(user.getActive()) && user.getDeletedAt() == null;
+        boolean enabled = Boolean.TRUE.equals(user.getActive());
 
         return User.builder()
                 .username(user.getEmail())
