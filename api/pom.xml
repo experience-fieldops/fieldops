@@ -61,6 +61,17 @@
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+
+		<!-- ── Rate Limiting (issue #77) ──────────────────────────────────────
+		     Bucket4j: implementação do algoritmo Token Bucket para rate limiting.
+		     Usada no LoginRateLimitFilter e no RateLimitFilter.
+		     Versão fixada para evitar surpresas em build (sem ^ ou ~).
+		-->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j-core</artifactId>
+			<version>8.10.1</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -88,6 +99,52 @@
 						</path>
 					</annotationProcessorPaths>
 				</configuration>
+			</plugin>
+
+			<!--
+				OWASP Dependency-Check (issue #80)
+				────────────────────────────────────────────────────────────────────
+				Escaneia as dependências do projeto em busca de CVEs conhecidos
+				consultando o banco de dados NVD (National Vulnerability Database).
+
+				Como usar:
+				  mvn dependency-check:check
+
+				O relatório é gerado em:
+				  target/dependency-check-report.html
+
+				Parâmetro failBuildOnCVSS:
+				  Interrompe o build se alguma vulnerabilidade com score CVSS >= 7
+				  (HIGH ou CRITICAL) for encontrada. Ajuste conforme a política da equipe.
+
+				Atualização do banco NVD:
+				  O plugin baixa/atualiza o banco NVD automaticamente na primeira execução.
+				  Configure uma API Key NVD para evitar throttling em CI:
+				    <nvdApiKey>${env.NVD_API_KEY}</nvdApiKey>
+				  Obtenha em: https://nvd.nist.gov/developers/request-an-api-key
+			-->
+			<plugin>
+				<groupId>org.owasp</groupId>
+				<artifactId>dependency-check-maven</artifactId>
+				<version>10.0.3</version>
+				<configuration>
+					<!-- Interrompe o build em vulnerabilidades HIGH (7.0) ou CRITICAL (9.0+) -->
+					<failBuildOnCVSS>7</failBuildOnCVSS>
+					<!-- Formato do relatório: HTML para revisão manual, JSON para CI -->
+					<formats>
+						<format>HTML</format>
+						<format>JSON</format>
+					</formats>
+					<!-- Exclui artefatos de escopo test — não vão para produção -->
+					<skipTestScope>true</skipTestScope>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
