@@ -60,7 +60,7 @@ public class InspectionResponse {
      *   SINGLE_CHOICE          → chave da opção escolhida
      *   DATE                   → ISO-8601 (ex: "2026-09-14")
      */
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "response_value", columnDefinition = "TEXT")
     private String value;
 
     // Observação do técnico — obrigatória em casos de não conformidade quando configurado (RN-038)
