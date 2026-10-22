@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Configuração de logging do FieldOps (issue #78)
+  ══════════════════════════════════════════════════════════════════════════════
+  Perfis:
+    dev  (padrão) → saída colorida no console, nível DEBUG, formato legível
+    prod          → saída JSON estruturada no console, nível INFO
+
+  Para ativar o perfil de produção:
+    SPRING_PROFILES_ACTIVE=prod
+
+  Formato JSON (perfil prod):
+    Cada linha de log é um objeto JSON com os campos:
+      @timestamp, level, logger_name, message, stack_trace (se houver)
+    Compatível com Logstash / ELK Stack / AWS CloudWatch Logs Insights.
+
+  Campos NUNCA incluídos nos logs (issue #78 — dados confidenciais):
+    - passwordHash / senha
+    - token completo (apenas prefixo "session-***" quando necessário)
+    Os services são responsáveis por não passar esses valores ao AuditLogger.
+-->
+<configuration>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         PERFIL: dev — console colorido, DEBUG habilitado
+    ══════════════════════════════════════════════════════════════════ -->
+    <springProfile name="dev,default">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%clr(%d{HH:mm:ss.SSS}){faint} %clr(%5p) %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n%wEx</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+        </appender>
+
+        <!-- Logger dedicado para auditoria de segurança — sempre INFO+ em dev -->
+        <logger name="AUDIT" level="INFO" additivity="true"/>
+
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         PERFIL: prod — JSON estruturado, INFO habilitado
+         Cada evento vira uma linha JSON pronta para ingestão no ELK/CloudWatch
+    ══════════════════════════════════════════════════════════════════ -->
+    <springProfile name="prod">
+        <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <!-- Inclui campos customizados úteis para correlação -->
+                <includeMdcKeyName>requestId</includeMdcKeyName>
+                <includeMdcKeyName>userId</includeMdcKeyName>
+                <includeMdcKeyName>clientIp</includeMdcKeyName>
+                <!-- Nome da aplicação em todos os eventos -->
+                <customFields>{"app":"fieldops-api","env":"prod"}</customFields>
+                <!-- Usa @timestamp para compatibilidade com Logstash -->
+                <fieldNames>
+                    <timestamp>@timestamp</timestamp>
+                    <message>message</message>
+                    <logger>logger_name</logger>
+                    <level>level</level>
+                    <thread>thread_name</thread>
+                    <stackTrace>stack_trace</stackTrace>
+                </fieldNames>
+            </encoder>
+        </appender>
+
+        <!-- Logger dedicado para auditoria — sempre INFO+ em prod -->
+        <logger name="AUDIT" level="INFO" additivity="true"/>
+
+        <!-- Reduz verbosidade de frameworks em produção -->
+        <logger name="org.hibernate.SQL"                 level="WARN"/>
+        <logger name="org.springframework.web"           level="INFO"/>
+        <logger name="org.springframework.security"      level="INFO"/>
+
+        <root level="INFO">
+            <appender-ref ref="JSON_CONSOLE"/>
+        </root>
+    </springProfile>
+
+</configuration>

@@ -1,5 +1,6 @@
 package com.experiencefieldops.api.config;
 
+import com.experiencefieldops.api.security.AccessDeniedAuditHandler;
 import com.experiencefieldops.api.security.ApiRateLimitFilter;
 import com.experiencefieldops.api.security.LoginRateLimitFilter;
 import org.springframework.context.annotation.Bean;
@@ -40,11 +41,14 @@ public class SecurityConfig {
 
     private final LoginRateLimitFilter loginRateLimitFilter;
     private final ApiRateLimitFilter apiRateLimitFilter;
+    private final AccessDeniedAuditHandler accessDeniedAuditHandler;
 
     public SecurityConfig(LoginRateLimitFilter loginRateLimitFilter,
-                          ApiRateLimitFilter apiRateLimitFilter) {
+                          ApiRateLimitFilter apiRateLimitFilter,
+                          AccessDeniedAuditHandler accessDeniedAuditHandler) {
         this.loginRateLimitFilter = loginRateLimitFilter;
         this.apiRateLimitFilter = apiRateLimitFilter;
+        this.accessDeniedAuditHandler = accessDeniedAuditHandler;
     }
 
     /**
@@ -148,7 +152,16 @@ public class SecurityConfig {
                 // Endpoints públicos (login, etc.)
                 .requestMatchers("/api/public/**").permitAll()
                 // TODO: substituir por .authenticated() após implementar JWT
-                .anyRequest().permitAll());
+                .anyRequest().permitAll())
+
+            // ── Auditoria de acessos negados (issue #78) ────────────────────────
+            // O AccessDeniedHandler é acionado pelo Spring Security quando um usuário
+            // autenticado tenta acessar um recurso sem permissão (403).
+            // ATENÇÃO: enquanto anyRequest().permitAll() estiver ativo (sem JWT),
+            // este handler não será disparado na prática — ele entrará em operação
+            // automaticamente após a implementação de .authenticated() com JWT.
+            .exceptionHandling(ex -> ex
+                .accessDeniedHandler(accessDeniedAuditHandler));
 
         return http.build();
     }

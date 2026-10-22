@@ -72,6 +72,17 @@
 			<artifactId>bucket4j-core</artifactId>
 			<version>8.10.1</version>
 		</dependency>
+
+		<!-- ── Logs estruturados em JSON (issue #78) ────────────────────────────
+		     logstash-logback-encoder: serializa os eventos de log do Logback
+		     no formato JSON estruturado, compatível com Logstash/ELK/CloudWatch.
+		     Configurado via logback-spring.xml.
+		-->
+		<dependency>
+			<groupId>net.logstash.logback</groupId>
+			<artifactId>logstash-logback-encoder</artifactId>
+			<version>8.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
