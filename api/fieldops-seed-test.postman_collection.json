@@ -1,0 +1,981 @@
+{
+  "info": {
+    "name": "FieldOps — Seed Test",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection dedicada para testar as rotas usando os dados criados pelo DataSeeder.\n\n## Como usar\n\n1. Suba a API: `mvnw spring-boot:run` (perfil default/dev ativa o DataSeeder)\n2. Execute as requisicoes na ordem (de cima para baixo)\n3. Os scripts de teste capturam automaticamente os IDs do seed nas variaveis da collection\n4. As credenciais do seed estao na pasta 01\n\n## Dados do Seed\n\n### Usuarios\n| Email | Senha | Perfil |\n|---|---|---|\n| admin@fieldops.com | Admin@123 | ADMIN |\n| supervisor@fieldops.com | Sup@123 | SUPERVISOR |\n| tecnico@fieldops.com | Tec@123 | TECNICO |\n| novo.tecnico@fieldops.com | Senha@123 | TECNICO |\n\n### Clientes\n- Empresa ABC (12.345.678/0001-90)\n- Empresa XYZ (98.765.432/0001-10)\n\n### Locais\n- Filial Sao Paulo (ABC)\n- Filial Campinas (ABC)\n- Matriz Rio de Janeiro (XYZ)\n\n### Equipamentos\n- Compressor Industrial A1 (SP, ACTIVE)\n- Gerador Eletrico B2 (SP, ACTIVE)\n- Bomba Hidraulica C3 (Campinas, ACTIVE)\n- Caldeira Industrial D4 (RJ, INACTIVE)\n\n### Templates\n- Inspecao de Compressores (MECANICO) — v1, 3 secoes, 10 itens\n- Inspecao Eletrica Geral (ELETRICO) — v1, 2 secoes, 5 itens\n- Inspecao de Seguranca do Trabalho (SEGURANCA) — v1, 2 secoes, 7 itens\n\n### Inspecoes (5 cenarios)\n| # | Cliente | Local | Equipamento | Template | Status final |\n|---|---|---|---|---|---|\n| 1 | ABC | Sao Paulo | Compressor A1 | Compressores | IN_PROGRESS (exec em andamento) |\n| 2 | ABC | Sao Paulo | Gerador B2 | Compressores | IN_PROGRESS (exec concluida) |\n| 3 | ABC | Campinas | Bomba C3 | Eletrico | COMPLETED (exec pausada) |\n| 4 | XYZ | Rio | Caldeira D4 | Seguranca | CANCELLED |\n| 5 | XYZ | Rio | — | Seguranca | UNDER_REVIEW |\n\n### Nao Conformidades\n- 2 NCs na inspecao 2 (HIGH/OPEN, MEDIUM/RESOLVED)\n- 2 NCs na inspecao 3 (HIGH/OPEN, MEDIUM/RESOLVED)\n\n### Execucoes\n- exec1: insp1, IN_PROGRESS (Carlos, Sao Paulo)\n- exec2: insp2, COMPLETED (Carlos, Sao Paulo)\n- exec3: insp3, PAUSED (Novo Tecnico, Campinas)"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "adminId", "value": "" },
+    { "key": "supervisorId", "value": "" },
+    { "key": "tecnicoId", "value": "" },
+    { "key": "tecnico2Id", "value": "" },
+    { "key": "clientIdABC", "value": "" },
+    { "key": "clientIdXYZ", "value": "" },
+    { "key": "siteIdSP", "value": "" },
+    { "key": "siteIdCP", "value": "" },
+    { "key": "siteIdRJ", "value": "" },
+    { "key": "equipmentIdA1", "value": "" },
+    { "key": "equipmentIdB2", "value": "" },
+    { "key": "equipmentIdC3", "value": "" },
+    { "key": "equipmentIdD4", "value": "" },
+    { "key": "templateIdComp", "value": "" },
+    { "key": "templateIdElec", "value": "" },
+    { "key": "templateIdSec", "value": "" },
+    { "key": "versionIdComp", "value": "" },
+    { "key": "versionIdElec", "value": "" },
+    { "key": "versionIdSec", "value": "" },
+    { "key": "sectionId", "value": "" },
+    { "key": "itemId", "value": "" },
+    { "key": "inspCompressorId", "value": "" },
+    { "key": "inspGeradorId", "value": "" },
+    { "key": "inspBombaId", "value": "" },
+    { "key": "inspCaldeiraId", "value": "" },
+    { "key": "inspReviewId", "value": "" },
+    { "key": "snapshotItemId", "value": "" },
+    { "key": "snapshotItem2Id", "value": "" },
+    { "key": "executionId", "value": "" },
+    { "key": "responseId", "value": "" },
+    { "key": "ncId", "value": "" },
+    { "key": "reviewId", "value": "" },
+    { "key": "evidenceId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "01 — Login & Capturar IDs",
+      "description": "Faz login com os usuarios do seed e captura automaticamente todos os IDs das entidades criadas pelo DataSeeder. Execute nesta ordem para preencher as variaveis da collection.",
+      "item": [
+        {
+          "name": "Login como ADMIN",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"admin@fieldops.com\",\n  \"password\": \"Admin@123\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const t = b.token || (b.data && b.data.token);",
+              "if (t) pm.collectionVariables.set('token', t);",
+              "if (b.user && b.user.id) pm.collectionVariables.set('adminId', b.user.id);",
+              "pm.test('Token capturado', () => pm.expect(pm.collectionVariables.get('token')).to.not.be.empty);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar usuarios (captura IDs por email)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/user" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const users = Array.isArray(b) ? b : (b.data || []);",
+              "const find = (email) => users.find(u => u.email === email);",
+              "const admin = find('admin@fieldops.com'); if (admin) pm.collectionVariables.set('adminId', admin.id);",
+              "const sup = find('supervisor@fieldops.com'); if (sup) pm.collectionVariables.set('supervisorId', sup.id);",
+              "const tec = find('tecnico@fieldops.com'); if (tec) pm.collectionVariables.set('tecnicoId', tec.id);",
+              "const tec2 = find('novo.tecnico@fieldops.com'); if (tec2) pm.collectionVariables.set('tecnico2Id', tec2.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar clientes (captura ABC e XYZ)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/clients" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
+              "const abc = items.find(c => c.name === 'Empresa ABC'); if (abc) pm.collectionVariables.set('clientIdABC', abc.id);",
+              "const xyz = items.find(c => c.name === 'Empresa XYZ'); if (xyz) pm.collectionVariables.set('clientIdXYZ', xyz.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar locais do cliente ABC (captura SP e Campinas)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/clients/{{clientIdABC}}/sites" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
+              "const sp = items.find(s => s.name === 'Filial São Paulo'); if (sp) pm.collectionVariables.set('siteIdSP', sp.id);",
+              "const cp = items.find(s => s.name === 'Filial Campinas'); if (cp) pm.collectionVariables.set('siteIdCP', cp.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar locais do cliente XYZ (captura Rio)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/clients/{{clientIdXYZ}}/sites" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
+              "const rj = items.find(s => s.name.includes('Rio de Janeiro')); if (rj) pm.collectionVariables.set('siteIdRJ', rj.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar equipamentos de Sao Paulo (captura A1 e B2)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sites/{{siteIdSP}}/equipments" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
+              "const a1 = items.find(e => e.name.includes('Compressor')); if (a1) pm.collectionVariables.set('equipmentIdA1', a1.id);",
+              "const b2 = items.find(e => e.name.includes('Gerador')); if (b2) pm.collectionVariables.set('equipmentIdB2', b2.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar equipamentos de Campinas (captura C3)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sites/{{siteIdCP}}/equipments" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
+              "const c3 = items.find(e => e.name.includes('Bomba')); if (c3) pm.collectionVariables.set('equipmentIdC3', c3.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar equipamentos do Rio (captura D4)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sites/{{siteIdRJ}}/equipments" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
+              "const d4 = items.find(e => e.name.includes('Caldeira')); if (d4) pm.collectionVariables.set('equipmentIdD4', d4.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar templates (captura 3 templates)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
+              "const comp = items.find(t => t.title.includes('Compressores')); if (comp) pm.collectionVariables.set('templateIdComp', comp.id);",
+              "const elec = items.find(t => t.title.includes('Elétrica')); if (elec) pm.collectionVariables.set('templateIdElec', elec.id);",
+              "const sec = items.find(t => t.title.includes('Segurança')); if (sec) pm.collectionVariables.set('templateIdSec', sec.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar versoes do template Compressores (captura versionId)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/{{templateIdComp}}/versions" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const versions = Array.isArray(b.data) ? b.data : (b.data && b.data.content ? b.data.content : []);",
+              "if (versions.length > 0) pm.collectionVariables.set('versionIdComp', versions[0].id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar versoes do template Eletrico (captura versionId)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/{{templateIdElec}}/versions" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const versions = Array.isArray(b.data) ? b.data : (b.data && b.data.content ? b.data.content : []);",
+              "if (versions.length > 0) pm.collectionVariables.set('versionIdElec', versions[0].id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar versoes do template Seguranca (captura versionId)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/{{templateIdSec}}/versions" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const versions = Array.isArray(b.data) ? b.data : (b.data && b.data.content ? b.data.content : []);",
+              "if (versions.length > 0) pm.collectionVariables.set('versionIdSec', versions[0].id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar inspecoes (captura 5 inspecoes por equipamento/status)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections?size=50" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
+              "const insp1 = items.find(i => i.equipmentName && i.equipmentName.includes('Compressor'));",
+              "if (insp1) pm.collectionVariables.set('inspCompressorId', insp1.id);",
+              "const insp2 = items.find(i => i.equipmentName && i.equipmentName.includes('Gerador'));",
+              "if (insp2) pm.collectionVariables.set('inspGeradorId', insp2.id);",
+              "const insp3 = items.find(i => i.equipmentName && i.equipmentName.includes('Bomba'));",
+              "if (insp3) pm.collectionVariables.set('inspBombaId', insp3.id);",
+              "const insp4 = items.find(i => i.equipmentName && i.equipmentName.includes('Caldeira'));",
+              "if (insp4) pm.collectionVariables.set('inspCaldeiraId', insp4.id);",
+              "const insp5 = items.find(i => i.status === 'UNDER_REVIEW');",
+              "if (insp5) pm.collectionVariables.set('inspReviewId', insp5.id);"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "02 — Templates (Estrutura Completa)",
+      "description": "Visualiza a estrutura completa dos templates do seed: versao com secoes e itens ordenados.",
+      "item": [
+        {
+          "name": "Versao Compressores (secoes + itens)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/versions/{{versionIdComp}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "if (data && data.sections) {",
+              "  console.log('Seções:', data.sections.length);",
+              "  data.sections.forEach(s => console.log('  ' + s.title + ' → ' + (s.items ? s.items.length : 0) + ' itens'));",
+              "}"
+            ]}
+          }]
+        },
+        {
+          "name": "Versao Eletrico (secoes + itens)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/versions/{{versionIdElec}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Versao Seguranca (secoes + itens)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/versions/{{versionIdSec}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "03 — Cenario A: Inspecao c/ Execucao em Andamento",
+      "description": "Inspecao do Compressor A1 (Empresa ABC, Sao Paulo). Status: IN_PROGRESS com execucao em andamento. Tecnico: Carlos. O seed ja criou snapshots, respostas, e uma execucao IN_PROGRESS com respostas de checklist.",
+      "item": [
+        {
+          "name": "Ver inspecao (com snapshots)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status IN_PROGRESS', () => pm.expect(data.status).to.equal('IN_PROGRESS'));",
+              "if (data.itemSnapshots && data.itemSnapshots.length > 0) {",
+              "  pm.collectionVariables.set('snapshotItemId', data.itemSnapshots[0].id);",
+              "  if (data.itemSnapshots.length > 1) pm.collectionVariables.set('snapshotItem2Id', data.itemSnapshots[1].id);",
+              "  console.log('Snapshots:', data.itemSnapshots.length, '→ primeiro:', data.itemSnapshots[0].code);",
+              "}"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar respostas da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Progresso da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses/progress" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Listar execucoes da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/executions" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const items = b.data || b || [];",
+              "const exec = Array.isArray(items) ? items[0] : null;",
+              "if (exec) pm.collectionVariables.set('executionId', exec.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Ver execucao por ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status IN_PROGRESS', () => pm.expect(data.status).to.equal('IN_PROGRESS'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar respostas do checklist (execucao)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Listar NCs da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/non-conformities" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "04 — Cenario B: Inspecao c/ Execucao Concluida",
+      "description": "Inspecao do Gerador B2 (Empresa ABC, Sao Paulo). Status: IN_PROGRESS com execucao COMPLETED. Tecnico: Carlos. O seed criou snapshots, respostas, 2 NCs e uma execucao concluida.",
+      "item": [
+        {
+          "name": "Ver inspecao (com snapshots)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspGeradorId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status IN_PROGRESS', () => pm.expect(data.status).to.equal('IN_PROGRESS'));",
+              "if (data.itemSnapshots && data.itemSnapshots.length > 0) pm.collectionVariables.set('snapshotItemId', data.itemSnapshots[0].id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar execucoes (deve ter 1 COMPLETED)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspGeradorId}}/executions" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const items = b.data || b || [];",
+              "const exec = Array.isArray(items) ? items.find(e => e.status === 'COMPLETED') : null;",
+              "if (exec) pm.collectionVariables.set('executionId', exec.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar respostas do checklist (execucao concluida)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Listar NCs (2 NCs: HIGH/OPEN + MEDIUM/RESOLVED)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspGeradorId}}/non-conformities" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const items = b.data || b || [];",
+              "const nc = Array.isArray(items) ? items.find(n => n.status === 'OPEN') : null;",
+              "if (nc) pm.collectionVariables.set('ncId', nc.id);"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "05 — Cenario C: Inspecao Concluida (execucao pausada)",
+      "description": "Inspecao da Bomba C3 (Empresa ABC, Campinas). Status: COMPLETED com execucao PAUSED. Tecnico: Novo Tecnico. O seed criou snapshots, respostas, 2 NCs e uma execucao pausada com 2 respostas parciais.",
+      "item": [
+        {
+          "name": "Ver inspecao (com snapshots)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspBombaId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status COMPLETED', () => pm.expect(data.status).to.equal('COMPLETED'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar execucoes (deve ter 1 PAUSED)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspBombaId}}/executions" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const items = b.data || b || [];",
+              "const exec = Array.isArray(items) ? items.find(e => e.status === 'PAUSED') : null;",
+              "if (exec) pm.collectionVariables.set('executionId', exec.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Ver execucao pausada por ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status PAUSED', () => pm.expect(data.status).to.equal('PAUSED'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar respostas do checklist (2 parciais)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Listar NCs",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspBombaId}}/non-conformities" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "06 — Cenario D: Inspecao Cancelada",
+      "description": "Inspecao da Caldeira D4 (Empresa XYZ, Rio). Status: CANCELLED pelo admin. Motivo: equipamento indisponivel.",
+      "item": [
+        {
+          "name": "Ver inspecao cancelada",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCaldeiraId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status CANCELLED', () => pm.expect(data.status).to.equal('CANCELLED'));",
+              "pm.test('Tem cancellationReason', () => pm.expect(data.cancellationReason).to.not.be.null);",
+              "console.log('Motivo:', data.cancellationReason);"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "07 — Cenario E: Inspecao em Revisao",
+      "description": "Inspecao do template Seguranca (Empresa XYZ, Rio). Status: UNDER_REVIEW. Tecnico: Novo Tecnico. O seed criou snapshots e respostas. Pronta para revisao do supervisor.",
+      "item": [
+        {
+          "name": "Ver inspecao (UNDER_REVIEW, sem equipamento)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status UNDER_REVIEW', () => pm.expect(data.status).to.equal('UNDER_REVIEW'));",
+              "pm.test('Sem equipamento', () => pm.expect(data.equipmentId).to.be.null);",
+              "if (data.itemSnapshots && data.itemSnapshots.length > 0) pm.collectionVariables.set('snapshotItemId', data.itemSnapshots[0].id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar respostas da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}/responses" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Progresso da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}/responses/progress" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "08 — Workflow de Revisao (Supervisor)",
+      "description": "Fluxo completo de revisao usando a inspecao UNDER_REVIEW do seed. Login como supervisor necessario. Ordem: iniciar revisao → aprovar OU reprovar.",
+      "item": [
+        {
+          "name": "Login como SUPERVISOR",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"supervisor@fieldops.com\",\n  \"password\": \"Sup@123\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const t = b.token || (b.data && b.data.token);",
+              "if (t) pm.collectionVariables.set('token', t);",
+              "pm.test('Token supervisor capturado', () => pm.expect(pm.collectionVariables.get('token')).to.not.be.empty);"
+            ]}
+          }]
+        },
+        {
+          "name": "Iniciar revisao",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}/reviews?reviewerId={{supervisorId}}", "query": [{ "key": "reviewerId", "value": "{{supervisorId}}" }] },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"comment\": \"Iniciando revisao da inspecao de seguranca\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "if (data && data.id) pm.collectionVariables.set('reviewId', data.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar revisoes da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}/reviews" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Buscar revisao por ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Aprovar inspecao",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/reviews/{{reviewId}}/approve?reviewerId={{supervisorId}}", "query": [{ "key": "reviewerId", "value": "{{supervisorId}}" }] },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"comment\": \"Inspecao aprovada. Itens de seguranca em conformidade.\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "console.log('Revisao aprovada:', JSON.stringify(data));"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "09 — Workflow de Execucao (Tecnico)",
+      "description": "Fluxo completo de execucao em campo. Usa a inspecao do Compressor A1 (IN_PROGRESS). Login como tecnico necessario. Ordem: iniciar execucao → registrar resposta → pausar → finalizar.",
+      "item": [
+        {
+          "name": "Login como TECNICO",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"email\": \"tecnico@fieldops.com\",\n  \"password\": \"Tec@123\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json();",
+              "const t = b.token || (b.data && b.data.token);",
+              "if (t) pm.collectionVariables.set('token', t);",
+              "pm.test('Token tecnico capturado', () => pm.expect(pm.collectionVariables.get('token')).to.not.be.empty);"
+            ]}
+          }]
+        },
+        {
+          "name": "Inspecoes atribuidas ao tecnico",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/inspections/assigned?technicianId={{tecnicoId}}", "query": [{ "key": "technicianId", "value": "{{tecnicoId}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Ver inspecao e capturar snapshotItemId",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "if (data.itemSnapshots && data.itemSnapshots.length > 0) {",
+              "  pm.collectionVariables.set('snapshotItemId', data.itemSnapshots[0].id);",
+              "  if (data.itemSnapshots.length > 1) pm.collectionVariables.set('snapshotItem2Id', data.itemSnapshots[1].id);",
+              "}"
+            ]}
+          }]
+        },
+        {
+          "name": "Iniciar execucao (GPS Sao Paulo)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/executions?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"gpsLatitude\": -23.5613,\n  \"gpsLongitude\": -46.6563,\n  \"startedAt\": \"2026-10-21T08:00:00\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "if (data && data.id) pm.collectionVariables.set('executionId', data.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Registrar resposta do checklist (BOOLEAN true)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"true\",\n  \"observation\": \"Item verificado em campo — conforme\",\n  \"notApplicable\": false,\n  \"gpsLatitude\": -23.5613,\n  \"gpsLongitude\": -46.6563,\n  \"respondedAt\": \"2026-10-21T08:15:00\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "if (data && data.id) pm.collectionVariables.set('responseId', data.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Registrar resposta (NUMBER — pressao)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"snapshotItemId\": {{snapshotItem2Id}},\n  \"value\": \"8.5\",\n  \"observation\": null,\n  \"notApplicable\": false,\n  \"gpsLatitude\": -23.5613,\n  \"gpsLongitude\": -46.6563,\n  \"respondedAt\": \"2026-10-21T08:20:00\"\n}"
+            }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }]
+        },
+        {
+          "name": "Listar respostas do checklist",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Pausar execucao",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{baseUrl}}/api/v1/executions/{{executionId}}/pause?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status PAUSED', () => pm.expect(data.status).to.equal('PAUSED'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Finalizar execucao",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/executions/{{executionId}}/complete?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"endGpsLatitude\": -23.5615,\n  \"endGpsLongitude\": -46.6567,\n  \"completedAt\": \"2026-10-21T10:30:00\",\n  \"notes\": \"Inspecao concluida. Equipamento operando dentro dos parametros.\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status COMPLETED', () => pm.expect(data.status).to.equal('COMPLETED'));"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "10 — Nao Conformidades",
+      "description": "Operacoes de NC usando as nao conformidades criadas pelo seed. A inspecao do Gerador B2 tem 2 NCs (HIGH/OPEN e MEDIUM/RESOLVED).",
+      "item": [
+        {
+          "name": "Listar NCs da inspecao (Gerador B2)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspGeradorId}}/non-conformities" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const items = b.data || b || [];",
+              "const open = Array.isArray(items) ? items.find(n => n.status === 'OPEN') : null;",
+              "if (open) pm.collectionVariables.set('ncId', open.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Buscar NC por ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/non-conformities/{{ncId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Marcar NC como RESOLVED",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/non-conformities/{{ncId}}/status",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"status\": \"RESOLVED\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "pm.test('Status RESOLVED', () => pm.expect(data.status).to.equal('RESOLVED'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Marcar NC como DISMISSED (exige justificativa)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/non-conformities/{{ncId}}/status",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"status\": \"DISMISSED\",\n  \"dismissalReason\": \"Item nao se aplica a este modelo de equipamento\"\n}"
+            }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "11 — Respostas do Checklist (Inspecao)",
+      "description": "Endpoints de respostas a nivel de inspecao (diferente das respostas a nivel de execucao). Usa a inspecao do Compressor A1 que ja tem respostas do seed.",
+      "item": [
+        {
+          "name": "Listar respostas da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses" },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "const b = pm.response.json(); const items = b.data || b || [];",
+              "const r = Array.isArray(items) && items.length > 0 ? items[0] : null;",
+              "if (r && r.id) pm.collectionVariables.set('responseId', r.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Buscar resposta por ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses/{{responseId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Registrar nova resposta (CONFORMITY)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"CONFORMING\",\n  \"observation\": \"Verificado em campo — item conforme\",\n  \"notApplicable\": false\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "if (data && data.id) pm.collectionVariables.set('responseId', data.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Atualizar resposta",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses/{{responseId}}",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"CONFORMING\",\n  \"observation\": \"Atualizado apos re-verificacao\",\n  \"notApplicable\": false\n}"
+            }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "12 — Registrar Nova NC",
+      "description": "Cria uma nova nao conformidade em uma inspecao do seed usando o snapshotItemId capturado.",
+      "item": [
+        {
+          "name": "Registrar NC (HIGH)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/non-conformities",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"title\": \"Vazamento no selo mecanico\",\n  \"description\": \"Vazamento de oleo identificado no selo mecanico durante inspecao visual. Volume estimado: 50ml/h. Necessario substituicao em ate 72h.\",\n  \"severity\": \"HIGH\",\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"evidenceAttached\": false\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "if (data && data.id) pm.collectionVariables.set('ncId', data.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Registrar NC (CRITICAL — exige descricao)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/non-conformities",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"title\": \"Risco de explosao\",\n  \"description\": \"Pressao acima do limite critico detectada no manometro principal. Parada imediata recomendada.\",\n  \"severity\": \"CRITICAL\",\n  \"snapshotItemId\": {{snapshotItem2Id}},\n  \"evidenceAttached\": true\n}"
+            }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "13 — Evidencias",
+      "description": "Upload e listagem de evidencias. O endpoint de upload usa multipart/form-data. Selecione um arquivo no campo 'file' antes de enviar.",
+      "item": [
+        {
+          "name": "Upload de evidencia (selecione um arquivo)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/evidences?responseId={{responseId}}&uploadedByUserId={{tecnicoId}}", "query": [
+              { "key": "responseId", "value": "{{responseId}}" },
+              { "key": "uploadedByUserId", "value": "{{tecnicoId}}" }
+            ]},
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "", "description": "Selecione um arquivo de imagem ou PDF" }]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const b = pm.response.json(); const data = b.data || b;",
+              "if (data && data.id) pm.collectionVariables.set('evidenceId', data.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Listar evidencias da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/evidences" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Buscar evidencia por ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/evidences/{{evidenceId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Deletar evidencia",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{baseUrl}}/api/v1/evidences/{{evidenceId}}?deletedByUserId={{tecnicoId}}&reason=Arquivo incorreto", "query": [
+              { "key": "deletedByUserId", "value": "{{tecnicoId}}" },
+              { "key": "reason", "value": "Arquivo incorreto" }
+            ]}
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "14 — Sync & Audit",
+      "description": "Endpoints de sincronizacao offline e logs de auditoria.",
+      "item": [
+        {
+          "name": "Status de sync da inspecao",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/sync-status" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Processar lote de sync",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/sync/batch?technicianId={{tecnicoId}}", "query": [{ "key": "technicianId", "value": "{{tecnicoId}}" }] },
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"operations\": [\n    {\n      \"idempotencyKey\": \"seed-test-op-001\",\n      \"type\": \"SAVE_RESPONSE\",\n      \"payload\": {\n        \"inspectionId\": {{inspCompressorId}},\n        \"snapshotItemId\": {{snapshotItemId}},\n        \"value\": \"true\",\n        \"notApplicable\": false\n      }\n    }\n  ]\n}"
+            }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Listar audit logs",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/audit-logs?requestingUserId={{adminId}}", "query": [{ "key": "requestingUserId", "value": "{{adminId}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    }
+
+  ]
+}

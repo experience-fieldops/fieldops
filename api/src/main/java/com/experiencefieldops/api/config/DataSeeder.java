@@ -54,6 +54,8 @@ public class DataSeeder implements ApplicationRunner {
     private final InspectionItemSnapshotRepository  snapshotRepository;
     private final InspectionResponseRepository      responseRepository;
     private final NonConformityRepository           nonConformityRepository;
+    private final InspectionExecutionRepository      executionRepository;
+    private final ChecklistResponseRepository       checklistResponseRepository;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -123,6 +125,9 @@ public class DataSeeder implements ApplicationRunner {
         seedSnapshotsAndResponses(insp5, vSeguranca);
         seedNonConformity(insp2);
         seedNonConformity(insp3);
+
+        // 13. Execuções de inspeção (InspectionExecution + ChecklistResponse)
+        seedExecutions(insp1, insp2, insp3, tecnico, tecnico2, vCompressor, vEletrico);
 
         log.info("[DataSeeder] Seed concluído com sucesso.");
     }
@@ -887,5 +892,124 @@ public class DataSeeder implements ApplicationRunner {
                     .evidenceAttached(true)
                     .build());
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // 13. EXECUÇÕES DE INSPEÇÃO (InspectionExecution + ChecklistResponse)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private void seedExecutions(
+            Inspection insp1, Inspection insp2, Inspection insp3,
+            User tecnico, User tecnico2,
+            InspectionTemplateVersion vCompressor, InspectionTemplateVersion vEletrico) {
+
+        // ── Cenário A: Execução em andamento (insp1 = SCHEDULED)
+        //    Técnico chega ao site e inicia a execução com GPS
+        InspectionExecution exec1 = executionRepository.save(InspectionExecution.builder()
+                .inspection(insp1)
+                .technician(tecnico)
+                .status(ExecutionStatus.IN_PROGRESS)
+                .startGpsLatitude(-23.5613)
+                .startGpsLongitude(-46.6563)
+                .startedAt(LocalDateTime.of(2026, 10, 21, 8, 0, 0))
+                .build());
+
+        // Atualiza a inspeção para IN_PROGRESS
+        insp1.setStatus(InspectionStatus.IN_PROGRESS);
+        insp1.setStartedAtServer(LocalDateTime.of(2026, 10, 21, 8, 0, 0));
+        inspectionRepository.save(insp1);
+
+        // Registra respostas do checklist para a execução em andamento
+        var snapshotsInsp1 = snapshotRepository
+                .findByInspectionIdOrderBySectionDisplayOrderAscItemDisplayOrderAsc(insp1.getId());
+        for (var snapshot : snapshotsInsp1) {
+            String val = buildSampleValue(snapshot.getResponseType(), snapshot.getCode());
+            checklistResponseRepository.save(ChecklistResponse.builder()
+                    .execution(exec1)
+                    .snapshotItem(snapshot)
+                    .value(val)
+                    .observation(needsObservationBySnapshot(snapshot) ? "Verificado em campo." : null)
+                    .notApplicable(false)
+                    .gpsLatitude(-23.5613)
+                    .gpsLongitude(-46.6563)
+                    .respondedAt(LocalDateTime.of(2026, 10, 21, 8, 15, 0))
+                    .build());
+        }
+
+        // ── Cenário B: Execução concluída (insp2 já IN_PROGRESS)
+        //    Técnico já iniciou e finalizou com sucesso
+        InspectionExecution exec2 = executionRepository.save(InspectionExecution.builder()
+                .inspection(insp2)
+                .technician(tecnico)
+                .status(ExecutionStatus.COMPLETED)
+                .startGpsLatitude(-23.5613)
+                .startGpsLongitude(-46.6563)
+                .endGpsLatitude(-23.5615)
+                .endGpsLongitude(-46.6567)
+                .startedAt(LocalDateTime.of(2026, 10, 15, 8, 0, 0))
+                .completedAt(LocalDateTime.of(2026, 10, 15, 10, 30, 0))
+                .notes("Inspeção concluída sem intercorrências. Equipamento operando dentro dos parâmetros.")
+                .build());
+
+        // Respostas do checklist para a execução concluída
+        var snapshotsInsp2 = snapshotRepository
+                .findByInspectionIdOrderBySectionDisplayOrderAscItemDisplayOrderAsc(insp2.getId());
+        for (var snapshot : snapshotsInsp2) {
+            String val = buildSampleValue(snapshot.getResponseType(), snapshot.getCode());
+            checklistResponseRepository.save(ChecklistResponse.builder()
+                    .execution(exec2)
+                    .snapshotItem(snapshot)
+                    .value(val)
+                    .observation(needsObservationBySnapshot(snapshot) ? "Item verificado e conforme." : null)
+                    .notApplicable(false)
+                    .gpsLatitude(-23.5613)
+                    .gpsLongitude(-46.6563)
+                    .respondedAt(LocalDateTime.of(2026, 10, 15, 8, 20, 0))
+                    .build());
+        }
+
+        // ── Cenário C: Execução pausada (insp3 = COMPLETED, mas com execução pausada)
+        //    Técnico pausou para almoço e não retomou
+        InspectionExecution exec3 = executionRepository.save(InspectionExecution.builder()
+                .inspection(insp3)
+                .technician(tecnico2)
+                .status(ExecutionStatus.PAUSED)
+                .startGpsLatitude(-22.9056)
+                .startGpsLongitude(-47.0608)
+                .startedAt(LocalDateTime.of(2026, 10, 14, 7, 30, 0))
+                .build());
+
+        // Respostas parciais para a execução pausada (apenas 2 itens respondidos)
+        var snapshotsInsp3 = snapshotRepository
+                .findByInspectionIdOrderBySectionDisplayOrderAscItemDisplayOrderAsc(insp3.getId());
+        if (snapshotsInsp3.size() >= 2) {
+            checklistResponseRepository.save(ChecklistResponse.builder()
+                    .execution(exec3)
+                    .snapshotItem(snapshotsInsp3.get(0))
+                    .value("true")
+                    .observation("Disjuntores verificados e em bom estado.")
+                    .notApplicable(false)
+                    .gpsLatitude(-22.9056)
+                    .gpsLongitude(-47.0608)
+                    .respondedAt(LocalDateTime.of(2026, 10, 14, 7, 45, 0))
+                    .build());
+
+            checklistResponseRepository.save(ChecklistResponse.builder()
+                    .execution(exec3)
+                    .snapshotItem(snapshotsInsp3.get(1))
+                    .value("220.0")
+                    .observation(null)
+                    .notApplicable(false)
+                    .gpsLatitude(-22.9056)
+                    .gpsLongitude(-47.0608)
+                    .respondedAt(LocalDateTime.of(2026, 10, 14, 8, 0, 0))
+                    .build());
+        }
+
+        log.info("[DataSeeder] Execuções de inspeção criadas: 1 em andamento, 1 concluída, 1 pausada.");
+    }
+
+    private boolean needsObservationBySnapshot(InspectionItemSnapshot snapshot) {
+        return snapshot.getObservationRequiredOnFailure();
     }
 }
