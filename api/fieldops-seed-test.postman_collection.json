@@ -2,840 +2,790 @@
   "info": {
     "name": "FieldOps — Seed Test",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Collection dedicada para testar as rotas usando os dados criados pelo DataSeeder.\n\n## Como usar\n\n1. Suba a API: `mvnw spring-boot:run` (perfil default/dev ativa o DataSeeder)\n2. Execute as requisicoes na ordem (de cima para baixo)\n3. Os scripts de teste capturam automaticamente os IDs do seed nas variaveis da collection\n4. As credenciais do seed estao na pasta 01\n\n## Dados do Seed\n\n### Usuarios\n| Email | Senha | Perfil |\n|---|---|---|\n| admin@fieldops.com | Admin@123 | ADMIN |\n| supervisor@fieldops.com | Sup@123 | SUPERVISOR |\n| tecnico@fieldops.com | Tec@123 | TECNICO |\n| novo.tecnico@fieldops.com | Senha@123 | TECNICO |\n\n### Clientes\n- Empresa ABC (12.345.678/0001-90)\n- Empresa XYZ (98.765.432/0001-10)\n\n### Locais\n- Filial Sao Paulo (ABC)\n- Filial Campinas (ABC)\n- Matriz Rio de Janeiro (XYZ)\n\n### Equipamentos\n- Compressor Industrial A1 (SP, ACTIVE)\n- Gerador Eletrico B2 (SP, ACTIVE)\n- Bomba Hidraulica C3 (Campinas, ACTIVE)\n- Caldeira Industrial D4 (RJ, INACTIVE)\n\n### Templates\n- Inspecao de Compressores (MECANICO) — v1, 3 secoes, 10 itens\n- Inspecao Eletrica Geral (ELETRICO) — v1, 2 secoes, 5 itens\n- Inspecao de Seguranca do Trabalho (SEGURANCA) — v1, 2 secoes, 7 itens\n\n### Inspecoes (5 cenarios)\n| # | Cliente | Local | Equipamento | Template | Status final |\n|---|---|---|---|---|---|\n| 1 | ABC | Sao Paulo | Compressor A1 | Compressores | IN_PROGRESS (exec em andamento) |\n| 2 | ABC | Sao Paulo | Gerador B2 | Compressores | IN_PROGRESS (exec concluida) |\n| 3 | ABC | Campinas | Bomba C3 | Eletrico | COMPLETED (exec pausada) |\n| 4 | XYZ | Rio | Caldeira D4 | Seguranca | CANCELLED |\n| 5 | XYZ | Rio | — | Seguranca | UNDER_REVIEW |\n\n### Nao Conformidades\n- 2 NCs na inspecao 2 (HIGH/OPEN, MEDIUM/RESOLVED)\n- 2 NCs na inspecao 3 (HIGH/OPEN, MEDIUM/RESOLVED)\n\n### Execucoes\n- exec1: insp1, IN_PROGRESS (Carlos, Sao Paulo)\n- exec2: insp2, COMPLETED (Carlos, Sao Paulo)\n- exec3: insp3, PAUSED (Novo Tecnico, Campinas)"
+    "description": "INSTRUCOES:\n1. Suba a API: mvnw spring-boot:run\n2. Execute a pasta 01 INTEIRA em ordem — ela faz login de todos os usuarios e captura todos os IDs automaticamente\n3. Execute as demais pastas na ordem desejada\n\nCREDENCIAIS DO SEED:\n  admin@fieldops.com        | Admin@123  | ADMIN\n  supervisor@fieldops.com   | Sup@123    | SUPERVISOR\n  tecnico@fieldops.com      | Tec@123    | TECNICO\n  novo.tecnico@fieldops.com | Senha@123  | TECNICO\n\nNOTAS:\n- Todos os IDs sao Long autoincrement. O H2 reinicia do zero a cada restart da API.\n- Os scripts de captura usam LoginResponse.user.id — sem depender de /api/user.\n- Todas as URLs sao strings simples (sem objeto url) para garantir expansao correta de variaveis.\n- Pasta 08 usa inspBombaId (COMPLETED) para iniciar revisao — a inspReviewId ja esta UNDER_REVIEW no seed."
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8080" },
-    { "key": "token", "value": "" },
-    { "key": "adminId", "value": "" },
-    { "key": "supervisorId", "value": "" },
-    { "key": "tecnicoId", "value": "" },
-    { "key": "tecnico2Id", "value": "" },
-    { "key": "clientIdABC", "value": "" },
-    { "key": "clientIdXYZ", "value": "" },
-    { "key": "siteIdSP", "value": "" },
-    { "key": "siteIdCP", "value": "" },
-    { "key": "siteIdRJ", "value": "" },
-    { "key": "equipmentIdA1", "value": "" },
-    { "key": "equipmentIdB2", "value": "" },
-    { "key": "equipmentIdC3", "value": "" },
-    { "key": "equipmentIdD4", "value": "" },
-    { "key": "templateIdComp", "value": "" },
-    { "key": "templateIdElec", "value": "" },
-    { "key": "templateIdSec", "value": "" },
-    { "key": "versionIdComp", "value": "" },
-    { "key": "versionIdElec", "value": "" },
-    { "key": "versionIdSec", "value": "" },
-    { "key": "sectionId", "value": "" },
-    { "key": "itemId", "value": "" },
+    { "key": "baseUrl",          "value": "http://localhost:8080" },
+    { "key": "token",            "value": "" },
+    { "key": "adminId",          "value": "" },
+    { "key": "supervisorId",     "value": "" },
+    { "key": "tecnicoId",        "value": "" },
+    { "key": "tecnico2Id",       "value": "" },
+    { "key": "clientIdABC",      "value": "" },
+    { "key": "clientIdXYZ",      "value": "" },
+    { "key": "siteIdSP",         "value": "" },
+    { "key": "siteIdCP",         "value": "" },
+    { "key": "siteIdRJ",         "value": "" },
+    { "key": "equipmentIdA1",    "value": "" },
+    { "key": "equipmentIdB2",    "value": "" },
+    { "key": "equipmentIdC3",    "value": "" },
+    { "key": "equipmentIdD4",    "value": "" },
+    { "key": "templateIdComp",   "value": "" },
+    { "key": "templateIdElec",   "value": "" },
+    { "key": "templateIdSec",    "value": "" },
+    { "key": "versionIdComp",    "value": "" },
+    { "key": "versionIdElec",    "value": "" },
+    { "key": "versionIdSec",     "value": "" },
     { "key": "inspCompressorId", "value": "" },
-    { "key": "inspGeradorId", "value": "" },
-    { "key": "inspBombaId", "value": "" },
-    { "key": "inspCaldeiraId", "value": "" },
-    { "key": "inspReviewId", "value": "" },
-    { "key": "snapshotItemId", "value": "" },
-    { "key": "snapshotItem2Id", "value": "" },
-    { "key": "executionId", "value": "" },
-    { "key": "responseId", "value": "" },
-    { "key": "ncId", "value": "" },
-    { "key": "reviewId", "value": "" },
-    { "key": "evidenceId", "value": "" }
+    { "key": "inspGeradorId",    "value": "" },
+    { "key": "inspBombaId",      "value": "" },
+    { "key": "inspCaldeiraId",   "value": "" },
+    { "key": "inspReviewId",     "value": "" },
+    { "key": "snapshotItemId",   "value": "" },
+    { "key": "snapshotItem2Id",  "value": "" },
+    { "key": "executionId",      "value": "" },
+    { "key": "responseId",       "value": "" },
+    { "key": "ncId",             "value": "" },
+    { "key": "reviewId",         "value": "" },
+    { "key": "evidenceId",       "value": "" }
   ],
   "auth": {
     "type": "bearer",
     "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
   },
   "item": [
+
     {
-      "name": "01 — Login & Capturar IDs",
-      "description": "Faz login com os usuarios do seed e captura automaticamente todos os IDs das entidades criadas pelo DataSeeder. Execute nesta ordem para preencher as variaveis da collection.",
+      "name": "01 — Login e Capturar IDs",
+      "description": "Execute todos em ordem. Cada login captura o ID do proprio usuario via LoginResponse.user.id — sem depender de /api/user. No final o token fica como ADMIN.",
       "item": [
         {
-          "name": "Login como ADMIN",
+          "name": "1a. Login ADMIN",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/auth/login",
             "auth": { "type": "noauth" },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"email\": \"admin@fieldops.com\",\n  \"password\": \"Admin@123\"\n}"
-            }
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"email\": \"admin@fieldops.com\",\n  \"password\": \"Admin@123\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const t = b.token || (b.data && b.data.token);",
-              "if (t) pm.collectionVariables.set('token', t);",
-              "if (b.user && b.user.id) pm.collectionVariables.set('adminId', b.user.id);",
-              "pm.test('Token capturado', () => pm.expect(pm.collectionVariables.get('token')).to.not.be.empty);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('token', b.token);",
+            "pm.collectionVariables.set('adminId', String(b.user.id));",
+            "console.log('adminId =', b.user.id);"
+          ]}}]
         },
         {
-          "name": "Listar usuarios (captura IDs por email)",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/user" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const users = Array.isArray(b) ? b : (b.data || []);",
-              "const find = (email) => users.find(u => u.email === email);",
-              "const admin = find('admin@fieldops.com'); if (admin) pm.collectionVariables.set('adminId', admin.id);",
-              "const sup = find('supervisor@fieldops.com'); if (sup) pm.collectionVariables.set('supervisorId', sup.id);",
-              "const tec = find('tecnico@fieldops.com'); if (tec) pm.collectionVariables.set('tecnicoId', tec.id);",
-              "const tec2 = find('novo.tecnico@fieldops.com'); if (tec2) pm.collectionVariables.set('tecnico2Id', tec2.id);"
-            ]}
-          }]
+          "name": "1b. Login SUPERVISOR",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" },
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"email\": \"supervisor@fieldops.com\",\n  \"password\": \"Sup@123\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('supervisorId', String(b.user.id));",
+            "console.log('supervisorId =', b.user.id);"
+          ]}}]
         },
         {
-          "name": "Listar clientes (captura ABC e XYZ)",
+          "name": "1c. Login TECNICO",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" },
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"email\": \"tecnico@fieldops.com\",\n  \"password\": \"Tec@123\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('tecnicoId', String(b.user.id));",
+            "console.log('tecnicoId =', b.user.id);"
+          ]}}]
+        },
+        {
+          "name": "1d. Login NOVO TECNICO",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" },
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"email\": \"novo.tecnico@fieldops.com\",\n  \"password\": \"Senha@123\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('tecnico2Id', String(b.user.id));",
+            "console.log('tecnico2Id =', b.user.id);"
+          ]}}]
+        },
+        {
+          "name": "1e. Login ADMIN (restaura token)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" },
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"email\": \"admin@fieldops.com\",\n  \"password\": \"Admin@123\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.collectionVariables.set('token', pm.response.json().token);",
+            "console.log('Token ADMIN restaurado.');",
+            "['adminId','supervisorId','tecnicoId','tecnico2Id'].forEach(k => console.log(k + '=' + pm.collectionVariables.get(k)));"
+          ]}}]
+        },
+        {
+          "name": "1f. Listar clientes",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/clients" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
-              "const abc = items.find(c => c.name === 'Empresa ABC'); if (abc) pm.collectionVariables.set('clientIdABC', abc.id);",
-              "const xyz = items.find(c => c.name === 'Empresa XYZ'); if (xyz) pm.collectionVariables.set('clientIdXYZ', xyz.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data.content || [];",
+            "const abc = list.find(c => c.name === 'Empresa ABC');",
+            "const xyz = list.find(c => c.name === 'Empresa XYZ');",
+            "if (abc) pm.collectionVariables.set('clientIdABC', String(abc.id));",
+            "if (xyz) pm.collectionVariables.set('clientIdXYZ', String(xyz.id));",
+            "console.log('clientIdABC=' + (abc&&abc.id) + ' clientIdXYZ=' + (xyz&&xyz.id));"
+          ]}}]
         },
         {
-          "name": "Listar locais do cliente ABC (captura SP e Campinas)",
+          "name": "1g. Listar locais ABC",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/clients/{{clientIdABC}}/sites" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
-              "const sp = items.find(s => s.name === 'Filial São Paulo'); if (sp) pm.collectionVariables.set('siteIdSP', sp.id);",
-              "const cp = items.find(s => s.name === 'Filial Campinas'); if (cp) pm.collectionVariables.set('siteIdCP', cp.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data.content || [];",
+            "const sp = list.find(s => s.name === 'Filial São Paulo');",
+            "const cp = list.find(s => s.name === 'Filial Campinas');",
+            "if (sp) pm.collectionVariables.set('siteIdSP', String(sp.id));",
+            "if (cp) pm.collectionVariables.set('siteIdCP', String(cp.id));",
+            "console.log('siteIdSP=' + (sp&&sp.id) + ' siteIdCP=' + (cp&&cp.id));"
+          ]}}]
         },
         {
-          "name": "Listar locais do cliente XYZ (captura Rio)",
+          "name": "1h. Listar locais XYZ",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/clients/{{clientIdXYZ}}/sites" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
-              "const rj = items.find(s => s.name.includes('Rio de Janeiro')); if (rj) pm.collectionVariables.set('siteIdRJ', rj.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data.content || [];",
+            "const rj = list.find(s => s.name && s.name.includes('Rio'));",
+            "if (rj) pm.collectionVariables.set('siteIdRJ', String(rj.id));",
+            "console.log('siteIdRJ=' + (rj&&rj.id));"
+          ]}}]
         },
         {
-          "name": "Listar equipamentos de Sao Paulo (captura A1 e B2)",
+          "name": "1i. Listar equipamentos SP",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sites/{{siteIdSP}}/equipments" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
-              "const a1 = items.find(e => e.name.includes('Compressor')); if (a1) pm.collectionVariables.set('equipmentIdA1', a1.id);",
-              "const b2 = items.find(e => e.name.includes('Gerador')); if (b2) pm.collectionVariables.set('equipmentIdB2', b2.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data.content || [];",
+            "const a1 = list.find(e => e.name && e.name.includes('Compressor'));",
+            "const b2 = list.find(e => e.name && e.name.includes('Gerador'));",
+            "if (a1) pm.collectionVariables.set('equipmentIdA1', String(a1.id));",
+            "if (b2) pm.collectionVariables.set('equipmentIdB2', String(b2.id));",
+            "console.log('A1=' + (a1&&a1.id) + ' B2=' + (b2&&b2.id));"
+          ]}}]
         },
         {
-          "name": "Listar equipamentos de Campinas (captura C3)",
+          "name": "1j. Listar equipamentos Campinas",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sites/{{siteIdCP}}/equipments" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
-              "const c3 = items.find(e => e.name.includes('Bomba')); if (c3) pm.collectionVariables.set('equipmentIdC3', c3.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data.content || [];",
+            "const c3 = list.find(e => e.name && e.name.includes('Bomba'));",
+            "if (c3) pm.collectionVariables.set('equipmentIdC3', String(c3.id));",
+            "console.log('C3=' + (c3&&c3.id));"
+          ]}}]
         },
         {
-          "name": "Listar equipamentos do Rio (captura D4)",
+          "name": "1k. Listar equipamentos Rio",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/sites/{{siteIdRJ}}/equipments" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
-              "const d4 = items.find(e => e.name.includes('Caldeira')); if (d4) pm.collectionVariables.set('equipmentIdD4', d4.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data.content || [];",
+            "const d4 = list.find(e => e.name && e.name.includes('Caldeira'));",
+            "if (d4) pm.collectionVariables.set('equipmentIdD4', String(d4.id));",
+            "console.log('D4=' + (d4&&d4.id));"
+          ]}}]
         },
         {
-          "name": "Listar templates (captura 3 templates)",
+          "name": "1l. Listar templates",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
-              "const comp = items.find(t => t.title.includes('Compressores')); if (comp) pm.collectionVariables.set('templateIdComp', comp.id);",
-              "const elec = items.find(t => t.title.includes('Elétrica')); if (elec) pm.collectionVariables.set('templateIdElec', elec.id);",
-              "const sec = items.find(t => t.title.includes('Segurança')); if (sec) pm.collectionVariables.set('templateIdSec', sec.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data.content || [];",
+            "const comp = list.find(t => t.title && t.title.includes('Compressores'));",
+            "const elec = list.find(t => t.title && (t.title.includes('Elétrica') || t.title.includes('Eletrica')));",
+            "const sec  = list.find(t => t.title && (t.title.includes('Segurança') || t.title.includes('Seguranca')));",
+            "if (comp) pm.collectionVariables.set('templateIdComp', String(comp.id));",
+            "if (elec) pm.collectionVariables.set('templateIdElec', String(elec.id));",
+            "if (sec)  pm.collectionVariables.set('templateIdSec',  String(sec.id));",
+            "console.log('comp=' + (comp&&comp.id) + ' elec=' + (elec&&elec.id) + ' sec=' + (sec&&sec.id));"
+          ]}}]
         },
         {
-          "name": "Listar versoes do template Compressores (captura versionId)",
+          "name": "1m. Versoes template Compressores",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/{{templateIdComp}}/versions" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const versions = Array.isArray(b.data) ? b.data : (b.data && b.data.content ? b.data.content : []);",
-              "if (versions.length > 0) pm.collectionVariables.set('versionIdComp', versions[0].id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data || [];",
+            "if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set('versionIdComp', String(list[0].id));",
+            "console.log('versionIdComp=' + pm.collectionVariables.get('versionIdComp'));"
+          ]}}]
         },
         {
-          "name": "Listar versoes do template Eletrico (captura versionId)",
+          "name": "1n. Versoes template Eletrico",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/{{templateIdElec}}/versions" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const versions = Array.isArray(b.data) ? b.data : (b.data && b.data.content ? b.data.content : []);",
-              "if (versions.length > 0) pm.collectionVariables.set('versionIdElec', versions[0].id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data || [];",
+            "if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set('versionIdElec', String(list[0].id));"
+          ]}}]
         },
         {
-          "name": "Listar versoes do template Seguranca (captura versionId)",
+          "name": "1o. Versoes template Seguranca",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/{{templateIdSec}}/versions" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const versions = Array.isArray(b.data) ? b.data : (b.data && b.data.content ? b.data.content : []);",
-              "if (versions.length > 0) pm.collectionVariables.set('versionIdSec', versions[0].id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data || [];",
+            "if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set('versionIdSec', String(list[0].id));"
+          ]}}]
         },
         {
-          "name": "Listar inspecoes (captura 5 inspecoes por equipamento/status)",
+          "name": "1p. Listar inspecoes (captura 5 IDs)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections?size=50" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const items = b.data && b.data.content ? b.data.content : (b.data || []);",
-              "const insp1 = items.find(i => i.equipmentName && i.equipmentName.includes('Compressor'));",
-              "if (insp1) pm.collectionVariables.set('inspCompressorId', insp1.id);",
-              "const insp2 = items.find(i => i.equipmentName && i.equipmentName.includes('Gerador'));",
-              "if (insp2) pm.collectionVariables.set('inspGeradorId', insp2.id);",
-              "const insp3 = items.find(i => i.equipmentName && i.equipmentName.includes('Bomba'));",
-              "if (insp3) pm.collectionVariables.set('inspBombaId', insp3.id);",
-              "const insp4 = items.find(i => i.equipmentName && i.equipmentName.includes('Caldeira'));",
-              "if (insp4) pm.collectionVariables.set('inspCaldeiraId', insp4.id);",
-              "const insp5 = items.find(i => i.status === 'UNDER_REVIEW');",
-              "if (insp5) pm.collectionVariables.set('inspReviewId', insp5.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data.content || [];",
+            "const i1 = list.find(i => i.equipmentName && i.equipmentName.includes('Compressor'));",
+            "const i2 = list.find(i => i.equipmentName && i.equipmentName.includes('Gerador'));",
+            "const i3 = list.find(i => i.equipmentName && i.equipmentName.includes('Bomba'));",
+            "const i4 = list.find(i => i.equipmentName && i.equipmentName.includes('Caldeira'));",
+            "const i5 = list.find(i => i.status === 'UNDER_REVIEW');",
+            "if (i1) pm.collectionVariables.set('inspCompressorId', String(i1.id));",
+            "if (i2) pm.collectionVariables.set('inspGeradorId',    String(i2.id));",
+            "if (i3) pm.collectionVariables.set('inspBombaId',      String(i3.id));",
+            "if (i4) pm.collectionVariables.set('inspCaldeiraId',   String(i4.id));",
+            "if (i5) pm.collectionVariables.set('inspReviewId',     String(i5.id));",
+            "console.log('comp=' + (i1&&i1.id) + ' ger=' + (i2&&i2.id) + ' bom=' + (i3&&i3.id) + ' cal=' + (i4&&i4.id) + ' rev=' + (i5&&i5.id));"
+          ]}}]
+        },
+        {
+          "name": "1q. Ver inspecao Compressor (captura snapshotItemId e snapshotItem2Id)",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const snaps = (pm.response.json().data || pm.response.json()).itemSnapshots || [];",
+            "if (snaps.length > 0) pm.collectionVariables.set('snapshotItemId',  String(snaps[0].id));",
+            "if (snaps.length > 1) pm.collectionVariables.set('snapshotItem2Id', String(snaps[1].id));",
+            "console.log('=== SETUP COMPLETO ===');",
+            "['adminId','supervisorId','tecnicoId','tecnico2Id',",
+            " 'clientIdABC','clientIdXYZ','siteIdSP','siteIdCP','siteIdRJ',",
+            " 'equipmentIdA1','equipmentIdB2','equipmentIdC3','equipmentIdD4',",
+            " 'templateIdComp','versionIdComp',",
+            " 'inspCompressorId','inspGeradorId','inspBombaId','inspCaldeiraId','inspReviewId',",
+            " 'snapshotItemId','snapshotItem2Id'",
+            "].forEach(k => console.log(k + ' = ' + pm.collectionVariables.get(k)));"
+          ]}}]
         }
       ]
     },
+
     {
-      "name": "02 — Templates (Estrutura Completa)",
-      "description": "Visualiza a estrutura completa dos templates do seed: versao com secoes e itens ordenados.",
+      "name": "02 — Templates",
       "item": [
         {
           "name": "Versao Compressores (secoes + itens)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/versions/{{versionIdComp}}" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "if (data && data.sections) {",
-              "  console.log('Seções:', data.sections.length);",
-              "  data.sections.forEach(s => console.log('  ' + s.title + ' → ' + (s.items ? s.items.length : 0) + ' itens'));",
-              "}"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Versao Eletrico (secoes + itens)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/versions/{{versionIdElec}}" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Versao Seguranca (secoes + itens)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/templates/versions/{{versionIdSec}}" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         }
       ]
     },
+
     {
-      "name": "03 — Cenario A: Inspecao c/ Execucao em Andamento",
-      "description": "Inspecao do Compressor A1 (Empresa ABC, Sao Paulo). Status: IN_PROGRESS com execucao em andamento. Tecnico: Carlos. O seed ja criou snapshots, respostas, e uma execucao IN_PROGRESS com respostas de checklist.",
+      "name": "03 — Cenario A: Compressor A1 (IN_PROGRESS + exec em andamento)",
       "item": [
         {
-          "name": "Ver inspecao (com snapshots)",
+          "name": "Ver inspecao",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status IN_PROGRESS', () => pm.expect(data.status).to.equal('IN_PROGRESS'));",
-              "if (data.itemSnapshots && data.itemSnapshots.length > 0) {",
-              "  pm.collectionVariables.set('snapshotItemId', data.itemSnapshots[0].id);",
-              "  if (data.itemSnapshots.length > 1) pm.collectionVariables.set('snapshotItem2Id', data.itemSnapshots[1].id);",
-              "  console.log('Snapshots:', data.itemSnapshots.length, '→ primeiro:', data.itemSnapshots[0].code);",
-              "}"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "pm.test('IN_PROGRESS', () => pm.expect(d.status).to.equal('IN_PROGRESS'));"
+          ]}}]
         },
         {
-          "name": "Listar respostas da inspecao",
+          "name": "Listar respostas",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data || [];",
+            "if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set('responseId', String(list[0].id));"
+          ]}}]
         },
         {
-          "name": "Progresso da inspecao",
+          "name": "Progresso",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses/progress" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
-          "name": "Listar execucoes da inspecao",
+          "name": "Listar execucoes",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/executions" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const items = b.data || b || [];",
-              "const exec = Array.isArray(items) ? items[0] : null;",
-              "if (exec) pm.collectionVariables.set('executionId', exec.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data || [];",
+            "if (Array.isArray(list) && list.length > 0) pm.collectionVariables.set('executionId', String(list[0].id));"
+          ]}}]
         },
         {
           "name": "Ver execucao por ID",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status IN_PROGRESS', () => pm.expect(data.status).to.equal('IN_PROGRESS'));"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
-          "name": "Listar respostas do checklist (execucao)",
+          "name": "Listar respostas do checklist da execucao",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
-        },
-        {
-          "name": "Listar NCs da inspecao",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/non-conformities" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         }
       ]
     },
+
     {
-      "name": "04 — Cenario B: Inspecao c/ Execucao Concluida",
-      "description": "Inspecao do Gerador B2 (Empresa ABC, Sao Paulo). Status: IN_PROGRESS com execucao COMPLETED. Tecnico: Carlos. O seed criou snapshots, respostas, 2 NCs e uma execucao concluida.",
+      "name": "04 — Cenario B: Gerador B2 (IN_PROGRESS + exec COMPLETED + 2 NCs)",
       "item": [
         {
-          "name": "Ver inspecao (com snapshots)",
+          "name": "Ver inspecao",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspGeradorId}}" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status IN_PROGRESS', () => pm.expect(data.status).to.equal('IN_PROGRESS'));",
-              "if (data.itemSnapshots && data.itemSnapshots.length > 0) pm.collectionVariables.set('snapshotItemId', data.itemSnapshots[0].id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
-          "name": "Listar execucoes (deve ter 1 COMPLETED)",
+          "name": "Listar execucoes (1 COMPLETED)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspGeradorId}}/executions" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const items = b.data || b || [];",
-              "const exec = Array.isArray(items) ? items.find(e => e.status === 'COMPLETED') : null;",
-              "if (exec) pm.collectionVariables.set('executionId', exec.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data || [];",
+            "const exec = Array.isArray(list) ? list.find(e => e.status === 'COMPLETED') : null;",
+            "if (exec) pm.collectionVariables.set('executionId', String(exec.id));"
+          ]}}]
         },
         {
-          "name": "Listar respostas do checklist (execucao concluida)",
+          "name": "Listar respostas do checklist",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
-          "name": "Listar NCs (2 NCs: HIGH/OPEN + MEDIUM/RESOLVED)",
+          "name": "Listar NCs (HIGH/OPEN + MEDIUM/RESOLVED)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspGeradorId}}/non-conformities" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const items = b.data || b || [];",
-              "const nc = Array.isArray(items) ? items.find(n => n.status === 'OPEN') : null;",
-              "if (nc) pm.collectionVariables.set('ncId', nc.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data || [];",
+            "const nc = Array.isArray(list) ? list.find(n => n.status === 'OPEN') : null;",
+            "if (nc) pm.collectionVariables.set('ncId', String(nc.id));"
+          ]}}]
         }
       ]
     },
+
     {
-      "name": "05 — Cenario C: Inspecao Concluida (execucao pausada)",
-      "description": "Inspecao da Bomba C3 (Empresa ABC, Campinas). Status: COMPLETED com execucao PAUSED. Tecnico: Novo Tecnico. O seed criou snapshots, respostas, 2 NCs e uma execucao pausada com 2 respostas parciais.",
+      "name": "05 — Cenario C: Bomba C3 (COMPLETED + exec PAUSED + 2 NCs)",
       "item": [
         {
-          "name": "Ver inspecao (com snapshots)",
+          "name": "Ver inspecao",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspBombaId}}" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status COMPLETED', () => pm.expect(data.status).to.equal('COMPLETED'));"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "pm.test('COMPLETED', () => pm.expect(d.status).to.equal('COMPLETED'));"
+          ]}}]
         },
         {
-          "name": "Listar execucoes (deve ter 1 PAUSED)",
+          "name": "Listar execucoes (1 PAUSED)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspBombaId}}/executions" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const items = b.data || b || [];",
-              "const exec = Array.isArray(items) ? items.find(e => e.status === 'PAUSED') : null;",
-              "if (exec) pm.collectionVariables.set('executionId', exec.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data || [];",
+            "const exec = Array.isArray(list) ? list.find(e => e.status === 'PAUSED') : null;",
+            "if (exec) pm.collectionVariables.set('executionId', String(exec.id));"
+          ]}}]
         },
         {
-          "name": "Ver execucao pausada por ID",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status PAUSED', () => pm.expect(data.status).to.equal('PAUSED'));"
-            ]}
-          }]
-        },
-        {
-          "name": "Listar respostas do checklist (2 parciais)",
+          "name": "Listar respostas parciais (2 itens)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Listar NCs",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspBombaId}}/non-conformities" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         }
       ]
     },
+
     {
-      "name": "06 — Cenario D: Inspecao Cancelada",
-      "description": "Inspecao da Caldeira D4 (Empresa XYZ, Rio). Status: CANCELLED pelo admin. Motivo: equipamento indisponivel.",
+      "name": "06 — Cenario D: Caldeira D4 (CANCELLED)",
       "item": [
         {
           "name": "Ver inspecao cancelada",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCaldeiraId}}" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status CANCELLED', () => pm.expect(data.status).to.equal('CANCELLED'));",
-              "pm.test('Tem cancellationReason', () => pm.expect(data.cancellationReason).to.not.be.null);",
-              "console.log('Motivo:', data.cancellationReason);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "pm.test('CANCELLED', () => pm.expect(d.status).to.equal('CANCELLED'));",
+            "console.log('Motivo:', d.cancellationReason);"
+          ]}}]
         }
       ]
     },
+
     {
-      "name": "07 — Cenario E: Inspecao em Revisao",
-      "description": "Inspecao do template Seguranca (Empresa XYZ, Rio). Status: UNDER_REVIEW. Tecnico: Novo Tecnico. O seed criou snapshots e respostas. Pronta para revisao do supervisor.",
+      "name": "07 — Cenario E: Seguranca (UNDER_REVIEW)",
       "item": [
         {
-          "name": "Ver inspecao (UNDER_REVIEW, sem equipamento)",
+          "name": "Ver inspecao UNDER_REVIEW",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status UNDER_REVIEW', () => pm.expect(data.status).to.equal('UNDER_REVIEW'));",
-              "pm.test('Sem equipamento', () => pm.expect(data.equipmentId).to.be.null);",
-              "if (data.itemSnapshots && data.itemSnapshots.length > 0) pm.collectionVariables.set('snapshotItemId', data.itemSnapshots[0].id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "pm.test('UNDER_REVIEW', () => pm.expect(d.status).to.equal('UNDER_REVIEW'));",
+            "const snaps = d.itemSnapshots || [];",
+            "if (snaps.length > 0) pm.collectionVariables.set('snapshotItemId', String(snaps[0].id));",
+            "if (snaps.length > 1) pm.collectionVariables.set('snapshotItem2Id', String(snaps[1].id));"
+          ]}}]
         },
         {
-          "name": "Listar respostas da inspecao",
+          "name": "Listar respostas",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}/responses" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
-          "name": "Progresso da inspecao",
+          "name": "Progresso",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}/responses/progress" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         }
       ]
     },
+
     {
       "name": "08 — Workflow de Revisao (Supervisor)",
-      "description": "Fluxo completo de revisao usando a inspecao UNDER_REVIEW do seed. Login como supervisor necessario. Ordem: iniciar revisao → aprovar OU reprovar.",
+      "description": "Usa inspBombaId (status COMPLETED) — a inspReviewId ja esta UNDER_REVIEW no seed e nao pode receber nova revisao.\nOrdem: login supervisor → iniciar revisao → aprovar OU reprovar → restaurar token ADMIN.",
       "item": [
         {
-          "name": "Login como SUPERVISOR",
+          "name": "Login SUPERVISOR (token + supervisorId)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/auth/login",
             "auth": { "type": "noauth" },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"email\": \"supervisor@fieldops.com\",\n  \"password\": \"Sup@123\"\n}"
-            }
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"email\": \"supervisor@fieldops.com\",\n  \"password\": \"Sup@123\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const t = b.token || (b.data && b.data.token);",
-              "if (t) pm.collectionVariables.set('token', t);",
-              "pm.test('Token supervisor capturado', () => pm.expect(pm.collectionVariables.get('token')).to.not.be.empty);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('token', b.token);",
+            "pm.collectionVariables.set('supervisorId', String(b.user.id));",
+            "console.log('supervisorId =', b.user.id);"
+          ]}}]
         },
         {
-          "name": "Iniciar revisao",
+          "name": "Iniciar revisao (inspBombaId — status COMPLETED)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}/reviews?reviewerId={{supervisorId}}", "query": [{ "key": "reviewerId", "value": "{{supervisorId}}" }] },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"comment\": \"Iniciando revisao da inspecao de seguranca\"\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspBombaId}}/reviews?reviewerId={{supervisorId}}",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"comment\": \"Iniciando revisao da inspecao da Bomba C3\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "if (data && data.id) pm.collectionVariables.set('reviewId', data.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "if (d && d.id) pm.collectionVariables.set('reviewId', String(d.id));",
+            "console.log('reviewId =', d && d.id);"
+          ]}}]
         },
         {
           "name": "Listar revisoes da inspecao",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspReviewId}}/reviews" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspBombaId}}/reviews" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Buscar revisao por ID",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Aprovar inspecao",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/v1/reviews/{{reviewId}}/approve?reviewerId={{supervisorId}}", "query": [{ "key": "reviewerId", "value": "{{supervisorId}}" }] },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"comment\": \"Inspecao aprovada. Itens de seguranca em conformidade.\"\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}/approve?reviewerId={{supervisorId}}",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"comment\": \"Inspecao aprovada. Todos os itens em conformidade.\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "console.log('Revisao aprovada:', JSON.stringify(data));"
-            ]}
-          }]
-        }
-      ]
-    },
-    {
-      "name": "09 — Workflow de Execucao (Tecnico)",
-      "description": "Fluxo completo de execucao em campo. Usa a inspecao do Compressor A1 (IN_PROGRESS). Login como tecnico necessario. Ordem: iniciar execucao → registrar resposta → pausar → finalizar.",
-      "item": [
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
+        },
         {
-          "name": "Login como TECNICO",
+          "name": "Reprovar inspecao (alternativa ao Aprovar)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/reviews/{{reviewId}}/reject?reviewerId={{supervisorId}}",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"rejectionReason\": \"Itens obrigatorios sem resposta. Revisar VIS-001 e VIS-002.\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
+        },
+        {
+          "name": "Login ADMIN (restaura token)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/auth/login",
             "auth": { "type": "noauth" },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"email\": \"tecnico@fieldops.com\",\n  \"password\": \"Tec@123\"\n}"
-            }
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"email\": \"admin@fieldops.com\",\n  \"password\": \"Admin@123\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json();",
-              "const t = b.token || (b.data && b.data.token);",
-              "if (t) pm.collectionVariables.set('token', t);",
-              "pm.test('Token tecnico capturado', () => pm.expect(pm.collectionVariables.get('token')).to.not.be.empty);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.collectionVariables.set('token', pm.response.json().token);"
+          ]}}]
+        }
+      ]
+    },
+
+    {
+      "name": "09 — Workflow de Execucao em Campo (Tecnico)",
+      "description": "Fluxo completo: login → iniciar execucao com GPS → registrar respostas → pausar → finalizar → restaurar token ADMIN.",
+      "item": [
+        {
+          "name": "Login TECNICO (token + tecnicoId)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" },
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"email\": \"tecnico@fieldops.com\",\n  \"password\": \"Tec@123\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.collectionVariables.set('token', b.token);",
+            "pm.collectionVariables.set('tecnicoId', String(b.user.id));",
+            "console.log('tecnicoId =', b.user.id);"
+          ]}}]
         },
         {
           "name": "Inspecoes atribuidas ao tecnico",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/inspections/assigned?technicianId={{tecnicoId}}", "query": [{ "key": "technicianId", "value": "{{tecnicoId}}" }] }
-          },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/assigned?technicianId={{tecnicoId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
-          "name": "Ver inspecao e capturar snapshotItemId",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "if (data.itemSnapshots && data.itemSnapshots.length > 0) {",
-              "  pm.collectionVariables.set('snapshotItemId', data.itemSnapshots[0].id);",
-              "  if (data.itemSnapshots.length > 1) pm.collectionVariables.set('snapshotItem2Id', data.itemSnapshots[1].id);",
-              "}"
-            ]}
-          }]
-        },
-        {
-          "name": "Iniciar execucao (GPS Sao Paulo)",
+          "name": "Iniciar execucao com GPS",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/executions?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"gpsLatitude\": -23.5613,\n  \"gpsLongitude\": -46.6563,\n  \"startedAt\": \"2026-10-21T08:00:00\"\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/executions?requestingUserId={{tecnicoId}}",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"gpsLatitude\": -23.5613,\n  \"gpsLongitude\": -46.6563,\n  \"startedAt\": \"2026-10-22T08:00:00\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "if (data && data.id) pm.collectionVariables.set('executionId', data.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "if (d && d.id) pm.collectionVariables.set('executionId', String(d.id));",
+            "console.log('executionId =', d && d.id);"
+          ]}}]
         },
         {
-          "name": "Registrar resposta do checklist (BOOLEAN true)",
+          "name": "Registrar resposta checklist BOOLEAN snap1",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"true\",\n  \"observation\": \"Item verificado em campo — conforme\",\n  \"notApplicable\": false,\n  \"gpsLatitude\": -23.5613,\n  \"gpsLongitude\": -46.6563,\n  \"respondedAt\": \"2026-10-21T08:15:00\"\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses?requestingUserId={{tecnicoId}}",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"true\",\n  \"observation\": \"Verificado em campo\",\n  \"notApplicable\": false,\n  \"gpsLatitude\": -23.5613,\n  \"gpsLongitude\": -46.6563,\n  \"respondedAt\": \"2026-10-22T08:15:00\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "if (data && data.id) pm.collectionVariables.set('responseId', data.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "if (d && d.id) pm.collectionVariables.set('responseId', String(d.id));"
+          ]}}]
         },
         {
-          "name": "Registrar resposta (NUMBER — pressao)",
+          "name": "Registrar resposta checklist NUMBER snap2",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"snapshotItemId\": {{snapshotItem2Id}},\n  \"value\": \"8.5\",\n  \"observation\": null,\n  \"notApplicable\": false,\n  \"gpsLatitude\": -23.5613,\n  \"gpsLongitude\": -46.6563,\n  \"respondedAt\": \"2026-10-21T08:20:00\"\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses?requestingUserId={{tecnicoId}}",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"snapshotItemId\": {{snapshotItem2Id}},\n  \"value\": \"8.5\",\n  \"observation\": null,\n  \"notApplicable\": false,\n  \"gpsLatitude\": -23.5613,\n  \"gpsLongitude\": -46.6563,\n  \"respondedAt\": \"2026-10-22T08:20:00\"\n}" }
           },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] }}]
         },
         {
           "name": "Listar respostas do checklist",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/responses" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Pausar execucao",
           "request": {
             "method": "PATCH",
-            "url": { "raw": "{{baseUrl}}/api/v1/executions/{{executionId}}/pause?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] }
+            "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/pause?requestingUserId={{tecnicoId}}"
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status PAUSED', () => pm.expect(data.status).to.equal('PAUSED'));"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "pm.test('PAUSED', () => pm.expect(d.status).to.equal('PAUSED'));"
+          ]}}]
         },
         {
           "name": "Finalizar execucao",
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/v1/executions/{{executionId}}/complete?requestingUserId={{tecnicoId}}", "query": [{ "key": "requestingUserId", "value": "{{tecnicoId}}" }] },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"endGpsLatitude\": -23.5615,\n  \"endGpsLongitude\": -46.6567,\n  \"completedAt\": \"2026-10-21T10:30:00\",\n  \"notes\": \"Inspecao concluida. Equipamento operando dentro dos parametros.\"\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/executions/{{executionId}}/complete?requestingUserId={{tecnicoId}}",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"endGpsLatitude\": -23.5615,\n  \"endGpsLongitude\": -46.6567,\n  \"completedAt\": \"2026-10-22T10:30:00\",\n  \"notes\": \"Inspecao concluida. Equipamento dentro dos parametros.\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status COMPLETED', () => pm.expect(data.status).to.equal('COMPLETED'));"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "pm.test('COMPLETED', () => pm.expect(d.status).to.equal('COMPLETED'));"
+          ]}}]
+        },
+        {
+          "name": "Login ADMIN (restaura token)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/auth/login",
+            "auth": { "type": "noauth" },
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"email\": \"admin@fieldops.com\",\n  \"password\": \"Admin@123\"\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.collectionVariables.set('token', pm.response.json().token);"
+          ]}}]
         }
       ]
     },
+
     {
       "name": "10 — Nao Conformidades",
-      "description": "Operacoes de NC usando as nao conformidades criadas pelo seed. A inspecao do Gerador B2 tem 2 NCs (HIGH/OPEN e MEDIUM/RESOLVED).",
       "item": [
         {
-          "name": "Listar NCs da inspecao (Gerador B2)",
+          "name": "Listar NCs do Gerador B2 (seed: HIGH/OPEN + MEDIUM/RESOLVED)",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspGeradorId}}/non-conformities" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const items = b.data || b || [];",
-              "const open = Array.isArray(items) ? items.find(n => n.status === 'OPEN') : null;",
-              "if (open) pm.collectionVariables.set('ncId', open.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const list = pm.response.json().data || [];",
+            "const nc = Array.isArray(list) ? list.find(n => n.status === 'OPEN') : null;",
+            "if (nc) pm.collectionVariables.set('ncId', String(nc.id));"
+          ]}}]
         },
         {
           "name": "Buscar NC por ID",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/non-conformities/{{ncId}}" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
-          "name": "Marcar NC como RESOLVED",
+          "name": "Criar NC (HIGH)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/non-conformities",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"title\": \"Vazamento no selo mecanico\",\n  \"description\": \"Vazamento de oleo no selo mecanico. Volume: 50ml/h.\",\n  \"severity\": \"HIGH\",\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"evidenceAttached\": false\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "if (d && d.id) pm.collectionVariables.set('ncId', String(d.id));"
+          ]}}]
+        },
+        {
+          "name": "Criar NC (CRITICAL)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/non-conformities",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"title\": \"Risco de explosao\",\n  \"description\": \"Pressao acima do limite critico no manometro principal. Parada imediata recomendada.\",\n  \"severity\": \"CRITICAL\",\n  \"snapshotItemId\": {{snapshotItem2Id}},\n  \"evidenceAttached\": true\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] }}]
+        },
+        {
+          "name": "Atualizar NC",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/non-conformities/{{ncId}}",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"title\": \"Vazamento no selo mecanico — atualizado\",\n  \"description\": \"Volume confirmado: 80ml/h.\",\n  \"severity\": \"HIGH\",\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"evidenceAttached\": true\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
+        },
+        {
+          "name": "Alterar status NC para RESOLVED",
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/non-conformities/{{ncId}}/status",
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"status\": \"RESOLVED\"\n}"
-            }
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"status\": \"RESOLVED\"\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "pm.test('Status RESOLVED', () => pm.expect(data.status).to.equal('RESOLVED'));"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
-          "name": "Marcar NC como DISMISSED (exige justificativa)",
+          "name": "Alterar status NC para DISMISSED",
           "request": {
             "method": "PATCH",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/non-conformities/{{ncId}}/status",
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"status\": \"DISMISSED\",\n  \"dismissalReason\": \"Item nao se aplica a este modelo de equipamento\"\n}"
-            }
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"status\": \"DISMISSED\",\n  \"dismissalReason\": \"Nao se aplica a este modelo de equipamento\"\n}" }
           },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         }
       ]
     },
+
     {
-      "name": "11 — Respostas do Checklist (Inspecao)",
-      "description": "Endpoints de respostas a nivel de inspecao (diferente das respostas a nivel de execucao). Usa a inspecao do Compressor A1 que ja tem respostas do seed.",
+      "name": "11 — Respostas da Inspecao",
       "item": [
         {
-          "name": "Listar respostas da inspecao",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses" },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('200 OK', () => pm.response.to.have.status(200));",
-              "const b = pm.response.json(); const items = b.data || b || [];",
-              "const r = Array.isArray(items) && items.length > 0 ? items[0] : null;",
-              "if (r && r.id) pm.collectionVariables.set('responseId', r.id);"
-            ]}
-          }]
-        },
-        {
-          "name": "Buscar resposta por ID",
-          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses/{{responseId}}" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
-        },
-        {
-          "name": "Registrar nova resposta (CONFORMITY)",
+          "name": "Registrar resposta BOOLEAN true",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses",
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"CONFORMING\",\n  \"observation\": \"Verificado em campo — item conforme\",\n  \"notApplicable\": false\n}"
-            }
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"true\",\n  \"observation\": null,\n  \"notApplicable\": false\n}" }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "if (data && data.id) pm.collectionVariables.set('responseId', data.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "if (d && d.id) pm.collectionVariables.set('responseId', String(d.id));"
+          ]}}]
+        },
+        {
+          "name": "Registrar resposta BOOLEAN false (com observacao)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"false\",\n  \"observation\": \"Vazamento identificado no selo mecanico\",\n  \"notApplicable\": false\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] }}]
+        },
+        {
+          "name": "Registrar resposta NAO APLICAVEL",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"snapshotItemId\": {{snapshotItem2Id}},\n  \"value\": null,\n  \"observation\": null,\n  \"notApplicable\": true\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] }}]
+        },
+        {
+          "name": "Listar respostas",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
+        },
+        {
+          "name": "Buscar resposta por ID",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses/{{responseId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Atualizar resposta",
@@ -843,136 +793,90 @@
             "method": "PUT",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/responses/{{responseId}}",
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"CONFORMING\",\n  \"observation\": \"Atualizado apos re-verificacao\",\n  \"notApplicable\": false\n}"
-            }
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"value\": \"true\",\n  \"observation\": \"Corrigido apos nova verificacao\",\n  \"notApplicable\": false\n}" }
           },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         }
       ]
     },
+
     {
-      "name": "12 — Registrar Nova NC",
-      "description": "Cria uma nova nao conformidade em uma inspecao do seed usando o snapshotItemId capturado.",
+      "name": "12 — Evidencias",
       "item": [
         {
-          "name": "Registrar NC (HIGH)",
+          "name": "Upload vinculado a resposta (selecione arquivo)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/non-conformities",
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"title\": \"Vazamento no selo mecanico\",\n  \"description\": \"Vazamento de oleo identificado no selo mecanico durante inspecao visual. Volume estimado: 50ml/h. Necessario substituicao em ate 72h.\",\n  \"severity\": \"HIGH\",\n  \"snapshotItemId\": {{snapshotItemId}},\n  \"evidenceAttached\": false\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/evidences?uploadedByUserId={{tecnicoId}}&responseId={{responseId}}",
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] }
           },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "if (data && data.id) pm.collectionVariables.set('ncId', data.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "if (d && d.id) pm.collectionVariables.set('evidenceId', String(d.id));"
+          ]}}]
         },
         {
-          "name": "Registrar NC (CRITICAL — exige descricao)",
+          "name": "Upload vinculado a NC (selecione arquivo)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/non-conformities",
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"title\": \"Risco de explosao\",\n  \"description\": \"Pressao acima do limite critico detectada no manometro principal. Parada imediata recomendada.\",\n  \"severity\": \"CRITICAL\",\n  \"snapshotItemId\": {{snapshotItem2Id}},\n  \"evidenceAttached\": true\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/evidences?uploadedByUserId={{tecnicoId}}&nonConformityId={{ncId}}",
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] }
           },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('201 Created', () => pm.response.to.have.status(201));"] } }]
-        }
-      ]
-    },
-    {
-      "name": "13 — Evidencias",
-      "description": "Upload e listagem de evidencias. O endpoint de upload usa multipart/form-data. Selecione um arquivo no campo 'file' antes de enviar.",
-      "item": [
-        {
-          "name": "Upload de evidencia (selecione um arquivo)",
-          "request": {
-            "method": "POST",
-            "url": { "raw": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/evidences?responseId={{responseId}}&uploadedByUserId={{tecnicoId}}", "query": [
-              { "key": "responseId", "value": "{{responseId}}" },
-              { "key": "uploadedByUserId", "value": "{{tecnicoId}}" }
-            ]},
-            "body": {
-              "mode": "formdata",
-              "formdata": [{ "key": "file", "type": "file", "src": "", "description": "Selecione um arquivo de imagem ou PDF" }]
-            }
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "type": "text/javascript", "exec": [
-              "pm.test('201 Created', () => pm.response.to.have.status(201));",
-              "const b = pm.response.json(); const data = b.data || b;",
-              "if (data && data.id) pm.collectionVariables.set('evidenceId', data.id);"
-            ]}
-          }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data || pm.response.json();",
+            "if (d && d.id) pm.collectionVariables.set('evidenceId', String(d.id));"
+          ]}}]
         },
         {
           "name": "Listar evidencias da inspecao",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/evidences" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Buscar evidencia por ID",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/evidences/{{evidenceId}}" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Deletar evidencia",
           "request": {
             "method": "DELETE",
-            "url": { "raw": "{{baseUrl}}/api/v1/evidences/{{evidenceId}}?deletedByUserId={{tecnicoId}}&reason=Arquivo incorreto", "query": [
-              { "key": "deletedByUserId", "value": "{{tecnicoId}}" },
-              { "key": "reason", "value": "Arquivo incorreto" }
-            ]}
+            "url": "{{baseUrl}}/api/v1/evidences/{{evidenceId}}?deletedByUserId={{tecnicoId}}&reason=Arquivo incorreto"
           },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         }
       ]
     },
+
     {
-      "name": "14 — Sync & Audit",
-      "description": "Endpoints de sincronizacao offline e logs de auditoria.",
+      "name": "13 — Sync e Audit",
       "item": [
         {
           "name": "Status de sync da inspecao",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/inspections/{{inspCompressorId}}/sync-status" },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Processar lote de sync",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "url": { "raw": "{{baseUrl}}/api/v1/sync/batch?technicianId={{tecnicoId}}", "query": [{ "key": "technicianId", "value": "{{tecnicoId}}" }] },
-            "body": {
-              "mode": "raw",
-              "options": { "raw": { "language": "json" } },
-              "raw": "{\n  \"operations\": [\n    {\n      \"idempotencyKey\": \"seed-test-op-001\",\n      \"type\": \"SAVE_RESPONSE\",\n      \"payload\": {\n        \"inspectionId\": {{inspCompressorId}},\n        \"snapshotItemId\": {{snapshotItemId}},\n        \"value\": \"true\",\n        \"notApplicable\": false\n      }\n    }\n  ]\n}"
-            }
+            "url": "{{baseUrl}}/api/v1/sync/batch?technicianId={{tecnicoId}}",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"operations\": [\n    {\n      \"idempotencyKey\": \"seed-test-op-001\",\n      \"type\": \"SAVE_RESPONSE\",\n      \"payload\": {\n        \"inspectionId\": {{inspCompressorId}},\n        \"snapshotItemId\": {{snapshotItemId}},\n        \"value\": \"true\",\n        \"notApplicable\": false\n      }\n    }\n  ]\n}" }
           },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         },
         {
           "name": "Listar audit logs",
-          "request": {
-            "method": "GET",
-            "url": { "raw": "{{baseUrl}}/api/v1/audit-logs?requestingUserId={{adminId}}", "query": [{ "key": "requestingUserId", "value": "{{adminId}}" }] }
-          },
-          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] } }]
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/audit-logs?requestingUserId={{adminId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
+        },
+        {
+          "name": "Buscar audit log por ID 1",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/v1/audit-logs/1?requestingUserId={{adminId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('200 OK', () => pm.response.to.have.status(200));"] }}]
         }
       ]
     }
