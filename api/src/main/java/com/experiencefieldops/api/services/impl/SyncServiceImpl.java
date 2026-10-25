@@ -7,26 +7,41 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.experiencefieldops.api.dto.InspectionCompleteRequest;
 import com.experiencefieldops.api.dto.InspectionStartRequest;
 import com.experiencefieldops.api.dto.NonConformityRequest;
+import com.experiencefieldops.api.dto.PendingSyncInspectionResponse;
 import com.experiencefieldops.api.dto.ResponseRequest;
 import com.experiencefieldops.api.dto.SyncBatchRequest;
 import com.experiencefieldops.api.dto.SyncBatchResponse;
+import com.experiencefieldops.api.dto.SyncItemRequest;
+import com.experiencefieldops.api.dto.SyncItemResult;
 import com.experiencefieldops.api.dto.SyncOperationRequest;
 import com.experiencefieldops.api.dto.SyncOperationResult;
+import com.experiencefieldops.api.dto.SyncRequest;
+import com.experiencefieldops.api.dto.SyncResponse;
 import com.experiencefieldops.api.dto.SyncStatusResponse;
+import com.experiencefieldops.api.dto.TemplateSectionResponse;
+import com.experiencefieldops.api.dto.TemplateItemResponse;
 import com.experiencefieldops.api.entities.Inspection;
+import com.experiencefieldops.api.entities.SyncLog;
 import com.experiencefieldops.api.entities.SyncOutbox;
+import com.experiencefieldops.api.entities.User;
 import com.experiencefieldops.api.enums.AuditAction;
 import com.experiencefieldops.api.enums.InspectionStatus;
+import com.experiencefieldops.api.enums.SyncLogStatus;
 import com.experiencefieldops.api.enums.SyncStatus;
 import com.experiencefieldops.api.exception.ResourceNotFoundException;
 import com.experiencefieldops.api.repositories.InspectionRepository;
+import com.experiencefieldops.api.repositories.SyncLogRepository;
 import com.experiencefieldops.api.repositories.SyncOutboxRepository;
+import com.experiencefieldops.api.repositories.TemplateSectionRepository;
+import com.experiencefieldops.api.repositories.TemplateItemRepository;
+import com.experiencefieldops.api.repositories.UserRepository;
 import com.experiencefieldops.api.services.AuditLogService;
 import com.experiencefieldops.api.services.InspectionResponseService;
 import com.experiencefieldops.api.services.InspectionService;
@@ -43,11 +58,16 @@ public class SyncServiceImpl implements SyncService {
     private static final Logger log = LoggerFactory.getLogger(SyncServiceImpl.class);
 
     private final SyncOutboxRepository outboxRepository;
+    private final SyncLogRepository syncLogRepository;
     private final InspectionRepository inspectionRepository;
+    private final SyncItemProcessor syncItemProcessor;
     private final InspectionService inspectionService;
     private final InspectionResponseService responseService;
     private final NonConformityService nonConformityService;
     private final AuditLogService auditLogService;
+    private final UserRepository userRepository;
+    private final TemplateSectionRepository sectionRepository;
+    private final TemplateItemRepository itemRepository;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -236,4 +256,112 @@ public class SyncServiceImpl implements SyncService {
                     "Tipo de operação desconhecido: " + op.getOperationType());
         }
     }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // NOVOS MÉTODOS — Issue #27
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * POST /api/v1/sync
+     *
+     * Processa lote de dados coletados offline, reutilizando a lógica existente
+     * da outbox (idempotência, ordenação por dependência, falhas individuais).
+     * Ao final registra um SyncLog com o resultado consolidado do lote.
+     *
+     * Retorna { synced: [...], failed: [...] } conforme issue #27.
+     */
+    @Override
+    @Transactional
+    public SyncResponse sync(SyncRequest request, Long technicianId) {
+        User technician = userRepository.findById(technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", technicianId));
+
+        // Ordena por dependência (mesma lógica do processBatch legado)
+        List<SyncItemRequest> ordered = request.getOperations().stream()
+                .sorted(Comparator.comparingInt(op -> op.getOperationType().ordinal()))
+                .toList();
+
+        List<SyncItemResult> synced = new ArrayList<>();
+        List<SyncItemResult> failed = new ArrayList<>();
+
+        for (SyncItemRequest item : ordered) {
+            SyncItemResult result = syncItemProcessor.process(item, technicianId);
+            if (result.getStatus() == SyncStatus.FAILED) {
+                failed.add(result);
+            } else {
+                synced.add(result);
+            }
+        }
+
+        // Status consolidado do lote
+        SyncLogStatus logStatus;
+        if (failed.isEmpty()) {
+            logStatus = SyncLogStatus.SUCCESS;
+        } else if (synced.isEmpty()) {
+            logStatus = SyncLogStatus.FAILED;
+        } else {
+            logStatus = SyncLogStatus.PARTIAL;
+        }
+
+        // Persiste o registro consolidado do lote
+        syncLogRepository.save(SyncLog.builder()
+                .technician(technician)
+                .status(logStatus)
+                .totalOperations(ordered.size())
+                .syncedCount(synced.size())
+                .failedCount(failed.size())
+                .build());
+
+        return SyncResponse.builder()
+                .status(logStatus)
+                .total(ordered.size())
+                .synced(synced)
+                .failed(failed)
+                .processedAt(LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * GET /api/v1/my-orders/pending-sync
+     *
+     * Retorna as inspeções SCHEDULED e IN_PROGRESS atribuídas ao técnico,
+     * com o template completo (seções + itens) para download offline.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<PendingSyncInspectionResponse> getPendingSync(Long technicianId) {
+        if (!userRepository.existsById(technicianId)) {
+            throw new ResourceNotFoundException("User", technicianId);
+        }
+
+        Specification<Inspection> spec = Specification
+                .<Inspection>where((root, q, cb) ->
+                        cb.equal(root.get("assignedTo").get("id"), technicianId))
+                .and((root, q, cb) ->
+                        root.get("status").in(InspectionStatus.SCHEDULED, InspectionStatus.IN_PROGRESS));
+
+        List<Inspection> inspections = inspectionRepository.findAll(spec);
+
+        return inspections.stream()
+                .map(inspection -> {
+                    Long versionId = inspection.getTemplateVersion().getId();
+                    List<TemplateSectionResponse> sections = sectionRepository
+                            .findByTemplateVersionIdOrderByDisplayOrder(versionId)
+                            .stream()
+                            .map(section -> {
+                                List<TemplateItemResponse> items = itemRepository
+                                        .findBySectionIdOrderByDisplayOrder(section.getId())
+                                        .stream()
+                                        .map(TemplateItemResponse::from)
+                                        .toList();
+                                return TemplateSectionResponse.from(section, items);
+                            })
+                            .toList();
+                    return PendingSyncInspectionResponse.from(inspection, sections);
+                })
+                .toList();
+    }
+
+    // processSyncItem e executeSyncItem foram movidos para SyncItemProcessor
+    // (REQUIRES_NEW garante isolamento de transação por operação)
 }

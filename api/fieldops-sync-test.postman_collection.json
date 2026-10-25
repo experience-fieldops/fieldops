@@ -1,0 +1,208 @@
+{
+  "info": {
+    "name": "FieldOps — Sync Offline (Issue #27)",
+    "description": "Collection para testar os endpoints de sincronização offline.\n\nPré-requisito: API rodando em localhost:8080 com banco H2 zerado.\n\n1. Execute '0. Login' primeiro — o token é salvo automaticamente.\n2. Execute os demais em ordem.\n\nIDs do seed (H2, sequencial):\n  admin      id=1\n  supervisor id=2\n  tecnico    id=3  (Carlos Tecnico — email: tecnico@fieldops.com)\n  tecnico2   id=4\n\n  insp1 id=1  SCHEDULED   — Compressor A1, assignedTo=tecnico(3)\n  insp2 id=2  IN_PROGRESS — Gerador B2,    assignedTo=tecnico(3)\n  insp3 id=3  COMPLETED   — Bomba C3,      assignedTo=tecnico2(4)\n  insp4 id=4  CANCELLED\n  insp5 id=5  UNDER_REVIEW",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",       "value": "http://localhost:8080" },
+    { "key": "token",         "value": "" },
+    { "key": "technicianId",  "value": "3" }
+  ],
+  "item": [
+    {
+      "name": "0. Login (salva token automaticamente)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var json = pm.response.json();",
+              "if (json.data && json.data.token) {",
+              "    pm.collectionVariables.set('token', json.data.token);",
+              "    console.log('Token salvo com sucesso.');",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{baseUrl}}/api/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"tecnico@fieldops.com\",\n  \"password\": \"Tec@123\"\n}"
+        }
+      }
+    },
+    {
+      "name": "1. GET pending-sync (ordens disponíveis offline)",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/my-orders/pending-sync?technicianId={{technicianId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "my-orders", "pending-sync"],
+          "query": [{ "key": "technicianId", "value": "{{technicianId}}" }]
+        },
+        "description": "Retorna inspeções SCHEDULED e IN_PROGRESS do técnico com template completo.\nEsperado: 200 OK — lista com insp1 (SCHEDULED) e insp2 (IN_PROGRESS)."
+      }
+    },
+    {
+      "name": "2. POST sync — lote completo (SUCCESS)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sync?technicianId={{technicianId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "sync"],
+          "query": [{ "key": "technicianId", "value": "{{technicianId}}" }]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operations\": [\n    {\n      \"idempotencyKey\": \"sync-test-001-start\",\n      \"inspectionId\": 1,\n      \"operationType\": \"START_INSPECTION\",\n      \"payload\": \"{\\\"startedAtDevice\\\":\\\"2026-10-24T08:00:00\\\"}\"\n    },\n    {\n      \"idempotencyKey\": \"sync-test-001-nc\",\n      \"inspectionId\": 1,\n      \"operationType\": \"SAVE_NON_CONFORMITY\",\n      \"payload\": \"{\\\"title\\\":\\\"Vazamento detectado offline\\\",\\\"description\\\":\\\"Encontrado durante inspeção em campo\\\",\\\"severity\\\":\\\"HIGH\\\",\\\"snapshotItemId\\\":null,\\\"evidenceAttached\\\":false}\"\n    },\n    {\n      \"idempotencyKey\": \"sync-test-001-complete\",\n      \"inspectionId\": 1,\n      \"operationType\": \"COMPLETE_INSPECTION\",\n      \"payload\": \"{\\\"completedAtDevice\\\":\\\"2026-10-24T10:00:00\\\"}\"\n    }\n  ]\n}"
+        },
+        "description": "Envia START + NC + COMPLETE para insp1 (SCHEDULED, assignedTo=tecnico id=3).\nO servidor reordena por dependência automaticamente.\n\nEsperado: 200, status=SUCCESS, synced=[3 itens], failed=[].\nVerificar no H2: SELECT * FROM sync_logs ORDER BY id DESC LIMIT 1 → status=SUCCESS"
+      }
+    },
+    {
+      "name": "3. POST sync — mesmo lote (idempotência → SKIPPED)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sync?technicianId={{technicianId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "sync"],
+          "query": [{ "key": "technicianId", "value": "{{technicianId}}" }]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operations\": [\n    {\n      \"idempotencyKey\": \"sync-test-001-start\",\n      \"inspectionId\": 1,\n      \"operationType\": \"START_INSPECTION\",\n      \"payload\": \"{\\\"startedAtDevice\\\":\\\"2026-10-24T08:00:00\\\"}\"\n    },\n    {\n      \"idempotencyKey\": \"sync-test-001-nc\",\n      \"inspectionId\": 1,\n      \"operationType\": \"SAVE_NON_CONFORMITY\",\n      \"payload\": \"{\\\"title\\\":\\\"Vazamento detectado offline\\\",\\\"description\\\":\\\"Encontrado durante inspeção em campo\\\",\\\"severity\\\":\\\"HIGH\\\",\\\"snapshotItemId\\\":null,\\\"evidenceAttached\\\":false}\"\n    },\n    {\n      \"idempotencyKey\": \"sync-test-001-complete\",\n      \"inspectionId\": 1,\n      \"operationType\": \"COMPLETE_INSPECTION\",\n      \"payload\": \"{\\\"completedAtDevice\\\":\\\"2026-10-24T10:00:00\\\"}\"\n    }\n  ]\n}"
+        },
+        "description": "Exatamente o mesmo payload do request 2 (mesmos idempotencyKeys).\n\nEsperado: 200, status=SUCCESS, TODOS os itens em synced[] com status=SKIPPED.\nNenhum dado duplicado no banco."
+      }
+    },
+    {
+      "name": "4. POST sync — falha parcial (PARTIAL)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sync?technicianId={{technicianId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "sync"],
+          "query": [{ "key": "technicianId", "value": "{{technicianId}}" }]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operations\": [\n    {\n      \"idempotencyKey\": \"sync-test-002-bad-response\",\n      \"inspectionId\": 2,\n      \"operationType\": \"SAVE_RESPONSE\",\n      \"payload\": \"{\\\"snapshotItemId\\\":99999,\\\"value\\\":\\\"true\\\",\\\"observation\\\":null,\\\"notApplicable\\\":false}\"\n    },\n    {\n      \"idempotencyKey\": \"sync-test-002-good-nc\",\n      \"inspectionId\": 2,\n      \"operationType\": \"SAVE_NON_CONFORMITY\",\n      \"payload\": \"{\\\"title\\\":\\\"NC válida offline\\\",\\\"description\\\":\\\"Identificado no campo\\\",\\\"severity\\\":\\\"MEDIUM\\\",\\\"snapshotItemId\\\":null,\\\"evidenceAttached\\\":false}\"\n    }\n  ]\n}"
+        },
+        "description": "Op1: snapshotItemId=99999 (inexistente) → failed[].\nOp2: NC válida para insp2 (IN_PROGRESS) → synced[].\n\nEsperado: 200, status=PARTIAL, synced=[1], failed=[1]."
+      }
+    },
+    {
+      "name": "5. POST sync — inspeção inexistente (FAILED)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sync?technicianId={{technicianId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "sync"],
+          "query": [{ "key": "technicianId", "value": "{{technicianId}}" }]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operations\": [\n    {\n      \"idempotencyKey\": \"sync-test-003-no-inspection\",\n      \"inspectionId\": 99999,\n      \"operationType\": \"START_INSPECTION\",\n      \"payload\": \"{\\\"startedAtDevice\\\":\\\"2026-10-24T08:00:00\\\"}\"\n    }\n  ]\n}"
+        },
+        "description": "inspectionId=99999 não existe no banco.\n\nEsperado: 200, status=FAILED, synced=[], failed=[1 item com errorMessage sobre ResourceNotFoundException]."
+      }
+    },
+    {
+      "name": "6. POST sync — inspeção CANCELLED (RN-077)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sync?technicianId={{technicianId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "sync"],
+          "query": [{ "key": "technicianId", "value": "{{technicianId}}" }]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operations\": [\n    {\n      \"idempotencyKey\": \"sync-test-004-cancelled\",\n      \"inspectionId\": 4,\n      \"operationType\": \"SAVE_NON_CONFORMITY\",\n      \"payload\": \"{\\\"title\\\":\\\"Teste NC em cancelada\\\",\\\"description\\\":\\\"Não deveria ser aceita\\\",\\\"severity\\\":\\\"LOW\\\",\\\"snapshotItemId\\\":null,\\\"evidenceAttached\\\":false}\"\n    }\n  ]\n}"
+        },
+        "description": "insp4 está com status=CANCELLED.\n\nEsperado: 200, status=FAILED, errorMessage contém 'RN-077' ou 'cancelada'."
+      }
+    },
+    {
+      "name": "7. POST sync — sem idempotencyKey (400 Bad Request)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type",  "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sync?technicianId={{technicianId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "sync"],
+          "query": [{ "key": "technicianId", "value": "{{technicianId}}" }]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operations\": [\n    {\n      \"inspectionId\": 1,\n      \"operationType\": \"START_INSPECTION\",\n      \"payload\": \"{\\\"startedAtDevice\\\":\\\"2026-10-24T08:00:00\\\"}\"\n    }\n  ]\n}"
+        },
+        "description": "Payload sem o campo obrigatório idempotencyKey.\n\nEsperado: 400 Bad Request — 'idempotencyKey é obrigatório'."
+      }
+    },
+    {
+      "name": "8. POST sync — sem autenticação (403)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/sync?technicianId=3",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "sync"],
+          "query": [{ "key": "technicianId", "value": "3" }]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"operations\": [\n    {\n      \"idempotencyKey\": \"sem-auth-test\",\n      \"inspectionId\": 1,\n      \"operationType\": \"START_INSPECTION\",\n      \"payload\": \"{\\\"startedAtDevice\\\":\\\"2026-10-24T08:00:00\\\"}\"\n    }\n  ]\n}"
+        },
+        "description": "Sem header Authorization.\n\nEsperado: 401 ou 403."
+      }
+    },
+    {
+      "name": "9. GET sync-status da inspeção 1",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/v1/inspections/1/sync-status",
+        "description": "Verifica o estado da outbox da inspeção 1 após os testes anteriores.\n\nEsperado: succeeded=3, skipped=3 (reenvio do request 3), failed=0, pending=0."
+      }
+    }
+  ]
+}
