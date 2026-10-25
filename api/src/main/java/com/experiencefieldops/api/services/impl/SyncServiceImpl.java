@@ -60,6 +60,7 @@ public class SyncServiceImpl implements SyncService {
     private final SyncOutboxRepository outboxRepository;
     private final SyncLogRepository syncLogRepository;
     private final InspectionRepository inspectionRepository;
+    private final SyncItemProcessor syncItemProcessor;
     private final InspectionService inspectionService;
     private final InspectionResponseService responseService;
     private final NonConformityService nonConformityService;
@@ -284,7 +285,7 @@ public class SyncServiceImpl implements SyncService {
         List<SyncItemResult> failed = new ArrayList<>();
 
         for (SyncItemRequest item : ordered) {
-            SyncItemResult result = processSyncItem(item, technicianId);
+            SyncItemResult result = syncItemProcessor.process(item, technicianId);
             if (result.getStatus() == SyncStatus.FAILED) {
                 failed.add(result);
             } else {
@@ -361,91 +362,6 @@ public class SyncServiceImpl implements SyncService {
                 .toList();
     }
 
-    /**
-     * Processa uma única operação do novo endpoint /sync.
-     * Reutiliza a outbox para idempotência, mas adapta ao formato SyncItemRequest.
-     */
-    private SyncItemResult processSyncItem(SyncItemRequest item, Long technicianId) {
-        // Idempotência: se já foi processada com sucesso, pula
-        return outboxRepository.findByIdempotencyKey(item.getIdempotencyKey())
-                .map(existing -> {
-                    if (existing.getStatus() == SyncStatus.SUCCESS) {
-                        return SyncItemResult.skipped(
-                                item.getIdempotencyKey(),
-                                item.getInspectionId(),
-                                item.getOperationType());
-                    }
-                    // Se estava FAILED, tenta novamente
-                    return executeSyncItem(item, existing, technicianId);
-                })
-                .orElseGet(() -> {
-                    Inspection inspection = inspectionRepository.findById(item.getInspectionId())
-                            .orElseThrow(() -> new ResourceNotFoundException(
-                                    "Inspection", item.getInspectionId()));
-
-                    SyncOutbox entry = SyncOutbox.builder()
-                            .idempotencyKey(item.getIdempotencyKey())
-                            .inspection(inspection)
-                            .operationType(item.getOperationType())
-                            .status(SyncStatus.PENDING)
-                            .payload(item.getPayload())
-                            .attemptCount(0)
-                            .build();
-
-                    return executeSyncItem(item, outboxRepository.save(entry), technicianId);
-                });
-    }
-
-    private SyncItemResult executeSyncItem(SyncItemRequest item, SyncOutbox entry,
-            Long technicianId) {
-        entry.setAttemptCount(entry.getAttemptCount() + 1);
-        entry.setProcessedAt(LocalDateTime.now());
-
-        try {
-            Inspection inspection = entry.getInspection();
-
-            if (inspection.getStatus() == InspectionStatus.APPROVED) {
-                throw new IllegalStateException(
-                        "Dados aprovados no servidor não aceitam atualização tardia (RN-076)");
-            }
-            if (inspection.getStatus() == InspectionStatus.CANCELLED) {
-                throw new IllegalStateException(
-                        "Inspeção cancelada no servidor — dados locais não foram descartados (RN-077)");
-            }
-
-            // Reusa o mesmo dispatch da outbox legada
-            SyncOperationRequest legacyOp = new SyncOperationRequest();
-            legacyOp.setIdempotencyKey(item.getIdempotencyKey());
-            legacyOp.setInspectionId(item.getInspectionId());
-            legacyOp.setOperationType(item.getOperationType());
-            legacyOp.setPayload(item.getPayload());
-            dispatch(legacyOp, technicianId);
-
-            entry.setStatus(SyncStatus.SUCCESS);
-            entry.setErrorMessage(null);
-            outboxRepository.save(entry);
-
-            return SyncItemResult.success(
-                    item.getIdempotencyKey(),
-                    item.getInspectionId(),
-                    item.getOperationType());
-
-        } catch (Exception e) {
-            log.warn("Sync falhou [key={}] [type={}]: {}",
-                    item.getIdempotencyKey(), item.getOperationType(), e.getMessage());
-
-            entry.setStatus(SyncStatus.FAILED);
-            entry.setErrorMessage(e.getMessage());
-            outboxRepository.save(entry);
-
-            auditLogService.log(technicianId, null, AuditAction.STATUS_CHANGE,
-                    "SyncOutbox", entry.getId(), "Falha: " + e.getMessage());
-
-            return SyncItemResult.failed(
-                    item.getIdempotencyKey(),
-                    item.getInspectionId(),
-                    item.getOperationType(),
-                    e.getMessage());
-        }
-    }
+    // processSyncItem e executeSyncItem foram movidos para SyncItemProcessor
+    // (REQUIRES_NEW garante isolamento de transação por operação)
 }
