@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.experiencefieldops.api.audit.AuditLogger;
 import com.experiencefieldops.api.dto.LocationDto;
 import com.experiencefieldops.api.entities.Client;
 import com.experiencefieldops.api.entities.Location;
@@ -16,10 +17,14 @@ public class LocationService {
 
     private final LocationRepository repo;
     private final ClientRepository clientRepo;
+    private final AuditLogger auditLogger;
 
-    public LocationService(LocationRepository repo, ClientRepository clientRepo) {
+    public LocationService(LocationRepository repo,
+                           ClientRepository clientRepo,
+                           AuditLogger auditLogger) {
         this.repo = repo;
         this.clientRepo = clientRepo;
+        this.auditLogger = auditLogger;
     }
 
     public List<LocationDto> getAll() {
@@ -36,7 +41,9 @@ public class LocationService {
         l.setCreatedAt(LocalDateTime.now());
         l.setUpdatedAt(LocalDateTime.now());
         if (l.getActive() == null) l.setActive(true);
-        return toDto(repo.save(l));
+        LocationDto saved = toDto(repo.save(l));
+        auditLogger.entityCreated("Location", saved.id(), "system");
+        return saved;
     }
 
     public LocationDto update(Long id, Long clientId, Location l) {
@@ -51,12 +58,15 @@ public class LocationService {
                 clientRepo.findById(clientId).ifPresent(existing::setClient);
             }
             existing.setUpdatedAt(LocalDateTime.now());
-            return toDto(repo.save(existing));
+            LocationDto updated = toDto(repo.save(existing));
+            auditLogger.entityUpdated("Location", updated.id(), "system");
+            return updated;
         }).orElse(null);
     }
 
     public void delete(Long id) {
         repo.deleteById(id);
+        auditLogger.entityDeleted("Location", id, "system");
     }
 
     private LocationDto toDto(Location l) {

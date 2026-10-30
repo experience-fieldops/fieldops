@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.experiencefieldops.api.audit.AuditLogger;
 import com.experiencefieldops.api.dto.ClientDto;
 import com.experiencefieldops.api.entities.Client;
 import com.experiencefieldops.api.repositories.ClientRepository;
@@ -13,9 +14,11 @@ import com.experiencefieldops.api.repositories.ClientRepository;
 public class ClientService {
 
     private final ClientRepository repo;
+    private final AuditLogger auditLogger;
 
-    public ClientService(ClientRepository repo) {
+    public ClientService(ClientRepository repo, AuditLogger auditLogger) {
         this.repo = repo;
+        this.auditLogger = auditLogger;
     }
 
     public List<ClientDto> getAll() {
@@ -30,7 +33,9 @@ public class ClientService {
         c.setCreatedAt(LocalDateTime.now());
         c.setUpdatedAt(LocalDateTime.now());
         if (c.getActive() == null) c.setActive(true);
-        return toDto(repo.save(c));
+        ClientDto saved = toDto(repo.save(c));
+        auditLogger.entityCreated("Client", saved.id(), "system");
+        return saved;
     }
 
     public ClientDto update(Long id, Client c) {
@@ -41,12 +46,15 @@ public class ClientService {
             existing.setDocument(c.getDocument());
             existing.setActive(c.getActive() != null ? c.getActive() : existing.getActive());
             existing.setUpdatedAt(LocalDateTime.now());
-            return toDto(repo.save(existing));
+            ClientDto updated = toDto(repo.save(existing));
+            auditLogger.entityUpdated("Client", updated.id(), "system");
+            return updated;
         }).orElse(null);
     }
 
     public void delete(Long id) {
         repo.deleteById(id);
+        auditLogger.entityDeleted("Client", id, "system");
     }
 
     private ClientDto toDto(Client c) {
