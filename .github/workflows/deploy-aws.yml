@@ -26,12 +26,16 @@ jobs:
         run: mvn package -DskipTests -q
         working-directory: api
 
-      - name: Criar pacote de deploy
+      - name: Criar pacote de deploy para Elastic Beanstalk
+        # O EB com plataforma Corretto (Java) espera:
+        # - app.jar na raiz do ZIP
+        # - Procfile na raiz (define como iniciar: porta 5000)
         run: |
           mkdir -p deploy
-          cp api/Dockerfile deploy/
           cp api/target/*.jar deploy/app.jar
+          cp api/Procfile deploy/Procfile
           cd deploy && zip -r ../fieldops-api.zip .
+          echo "Conteúdo do pacote:"; ls -la deploy/
 
       - name: Configurar credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -43,7 +47,7 @@ jobs:
       - name: Upload do pacote para S3
         run: |
           VERSION="fieldops-api-${{ github.sha }}.zip"
-          aws s3 cp fieldops-api.zip s3://${{ secrets.EB_BUCKET }}/$VERSION
+          aws s3 cp fieldops-api.zip "s3://${{ secrets.EB_BUCKET }}/$VERSION"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Criar nova versão no Elastic Beanstalk
@@ -51,7 +55,7 @@ jobs:
           aws elasticbeanstalk create-application-version \
             --application-name "${{ secrets.EB_APP_NAME }}" \
             --version-label "${{ github.sha }}" \
-            --source-bundle S3Bucket="${{ secrets.EB_BUCKET }}",S3Key="${{ env.VERSION }}"
+            --source-bundle "S3Bucket=${{ secrets.EB_BUCKET }},S3Key=${{ env.VERSION }}"
 
       - name: Deploy no ambiente Elastic Beanstalk
         run: |
@@ -59,7 +63,7 @@ jobs:
             --environment-name "${{ secrets.EB_ENV_NAME }}" \
             --version-label "${{ github.sha }}"
 
-      - name: Aguardar ambiente ficar pronto
+      - name: Aguardar deploy finalizar
         run: |
           aws elasticbeanstalk wait environment-updated \
             --environment-names "${{ secrets.EB_ENV_NAME }}"
