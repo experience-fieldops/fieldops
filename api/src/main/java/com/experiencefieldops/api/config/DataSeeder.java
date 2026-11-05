@@ -38,6 +38,7 @@ import java.util.UUID;
  */
 @Slf4j
 @Component
+@Profile("!prod")
 @RequiredArgsConstructor
 public class DataSeeder implements ApplicationRunner {
 
