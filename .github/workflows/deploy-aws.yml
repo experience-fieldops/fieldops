@@ -27,15 +27,14 @@ jobs:
         working-directory: api
 
       - name: Criar pacote de deploy para Elastic Beanstalk
-        # O EB com plataforma Corretto (Java) espera:
-        # - app.jar na raiz do ZIP
-        # - Procfile na raiz (define como iniciar: porta 5000)
+        # O EB Corretto espera app.jar + Procfile na raiz do ZIP
         run: |
-          mkdir -p deploy
-          cp api/target/*.jar deploy/app.jar
-          cp api/Procfile deploy/Procfile
-          cd deploy && zip -r ../fieldops-api.zip .
-          echo "Conteúdo do pacote:"; ls -la deploy/
+          mkdir -p eb-package
+          cp api/target/*.jar eb-package/app.jar
+          cp api/Procfile eb-package/Procfile
+          ls -la eb-package/
+          cd eb-package && zip -r ../fieldops-api.zip .
+          echo "ZIP criado: $(ls -lh ../fieldops-api.zip 2>/dev/null || ls -lh fieldops-api.zip)"
 
       - name: Configurar credenciais AWS
         uses: aws-actions/configure-aws-credentials@v4
