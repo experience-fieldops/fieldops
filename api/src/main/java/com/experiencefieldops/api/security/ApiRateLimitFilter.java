@@ -22,11 +22,10 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Rate limiting geral para todos os endpoints da API (issue #77).
  *
- * Estratégia: Token Bucket por token de autorização.
- * Enquanto JWT não estiver implementado, o fallback é por IP.
+ * Estratégia: Token Bucket por IP enquanto a API não possui autenticação JWT.
  *
  * Limites:
- *   - 100 requisições por minuto por token (ou IP quando sem token)
+ *   - 100 requisições por minuto por IP
  *
  * Ao exceder o limite:
  *   - Responde 429 Too Many Requests
@@ -35,8 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Nota: endpoints públicos (/api/public/**) não são afetados por este filtro
  * — o LoginRateLimitFilter já cobre o /login com limites mais restritivos.
  *
- * TODO: quando JWT for implementado, extrair o subject do token para usar
- * como chave em vez do raw header Authorization.
+ * Após a implementação de JWT, substituir a chave por um subject validado,
+ * nunca pelo valor bruto do header Authorization.
  */
 @Component
 public class ApiRateLimitFilter extends OncePerRequestFilter {
@@ -90,17 +89,10 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Determina a chave do bucket:
-     *   1. Header Authorization presente → usa o token (identificador do cliente autenticado)
-     *   2. Sem Authorization           → fallback por IP
-     *
-     * TODO: após implementação de JWT, extrair o claim "sub" do token.
+     * Até haver autenticação JWT validada, Authorization não é uma identidade
+     * confiável e não deve ser usado como chave nem exposto nos logs.
      */
     private String resolveBucketKey(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && !authHeader.isBlank()) {
-            return "token:" + authHeader;
-        }
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
             return "ip:" + forwarded.split(",")[0].trim();

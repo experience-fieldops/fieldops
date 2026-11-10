@@ -42,7 +42,7 @@ mvn dependency-check:check
 
 ---
 
-## Frontend (TypeScript / npm)
+## Frontend (TypeScript / npm) — fora deste checkout
 
 Gerenciado via `Front/package.json`. Todas as versões são **fixas** (sem `^` ou `~`) — issue #80.
 
@@ -60,6 +60,11 @@ Gerenciado via `Front/package.json`. Todas as versões são **fixas** (sem `^` o
 | typescript | 5.6.2 | devDep | Compilador TypeScript | Out/2026 |
 | vite | 6.4.5 | devDep | Build tool e dev server | Out/2026 |
 
+> **Limitação de validação:** este checkout não contém `Front/`, `mobile/`,
+> `admin/` nem qualquer `package.json`. A tabela e os avisos abaixo são
+> referências preexistentes, não resultado de um `npm audit` executado nesta
+> revisão. Confirme versões e advisories no repositório que contém o frontend.
+>
 > **⚠️ Vulnerabilidade pendente — ação necessária:**
 > `react-router-dom` 6.30.6 ainda possui 2 CVEs de severidade **moderate**
 > (GHSA-wrjc-x8rr-h8h6 e GHSA-337j-9hxr-rhxg).
@@ -71,7 +76,7 @@ Gerenciado via `Front/package.json`. Todas as versões são **fixas** (sem `^` o
 
 ```bash
 # Audita as dependências e exibe vulnerabilidades conhecidas
-cd Front
+# Execute no diretório do frontend que contém package.json e package-lock.json
 npm audit
 
 # Para corrigir automaticamente as vulnerabilidades sem breaking changes

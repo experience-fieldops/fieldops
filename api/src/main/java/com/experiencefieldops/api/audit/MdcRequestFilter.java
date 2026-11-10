@@ -22,8 +22,7 @@ import java.util.UUID;
  * Esses campos aparecem automaticamente em TODOS os logs emitidos
  * durante o processamento da requisição, incluindo os logs de auditoria.
  *
- * No perfil prod (JSON), o LogstashEncoder inclui os campos MDC no objeto JSON:
- *   { "@timestamp": "...", "requestId": "abc-123", "clientIp": "1.2.3.4", ... }
+ * Um encoder de logging que suporte MDC pode incluir esses campos nos eventos.
  *
  * O MDC é sempre limpo no bloco finally para evitar vazamento entre requisições
  * em ambientes com thread pool (ex: Tomcat).

@@ -22,9 +22,7 @@ import org.springframework.stereotype.Component;
  * O logger usa o nome "AUDIT" para permitir roteamento independente
  * (ex: arquivo separado, alerta no ELK) sem afetar o logging geral.
  *
- * Formato de saída (perfil prod — JSON):
- *   { "@timestamp": "...", "level": "INFO", "logger_name": "AUDIT",
- *     "message": "[AUTH] LOGIN_SUCCESS email=user@x.com ip=1.2.3.4" }
+ * Os eventos usam o logger nomeado "AUDIT" e seguem o formato do logging ativo.
  */
 @Component
 public class AuditLogger {

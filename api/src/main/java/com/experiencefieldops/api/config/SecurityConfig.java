@@ -56,8 +56,8 @@ public class SecurityConfig {
      *
      * Precisa de @Order menor que a cadeia principal para ter prioridade.
      * Permite iframes (frameOptions = SAMEORIGIN) necessários para o console H2.
-     * Em produção, desabilite o H2 Console via application.properties:
-     *   spring.h2.console.enabled=false
+     * O H2 Console está habilitado em application.properties para uso local;
+     * não exponha essa configuração em um ambiente acessível externamente.
      */
     @Bean
     @Order(1)
@@ -75,7 +75,7 @@ public class SecurityConfig {
      *
      * Ordem dos filtros de rate limiting (issue #77):
      *   1. LoginRateLimitFilter  → 5 req/min por IP em POST /api/public/auth/login
-     *   2. ApiRateLimitFilter    → 100 req/min por token (ou IP) nos demais endpoints
+     *   2. ApiRateLimitFilter    → 100 req/min por IP nos demais endpoints (sem JWT)
      *
      * Headers configurados (issue #76):
      * ┌─────────────────────────────────────┬──────────────────────────────────────────────────┐
@@ -85,7 +85,7 @@ public class SecurityConfig {
      * │ X-Frame-Options                     │ DENY                                             │
      * │ X-XSS-Protection                    │ 1; mode=block                                    │
      * │ Strict-Transport-Security (HSTS)    │ max-age=31536000; includeSubDomains              │
-     * │ Content-Security-Policy (CSP)       │ default-src 'self'; restrito para produção       │
+     * │ Content-Security-Policy (CSP)       │ diretivas restritivas definidas abaixo            │
      * │ Referrer-Policy                     │ strict-origin-when-cross-origin                  │
      * │ Permissions-Policy                  │ câmera, microfone e geolocalização desabilitados │
      * └─────────────────────────────────────┴──────────────────────────────────────────────────┘
@@ -120,14 +120,13 @@ public class SecurityConfig {
                 .xssProtection(xss -> xss
                     .headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
 
-                // HSTS: força HTTPS por 1 ano, incluindo subdomínios.
-                // Ative somente quando TLS estiver configurado em produção.
+                // HSTS: instrui clientes HTTPS a exigir TLS por 1 ano, incluindo subdomínios.
                 .httpStrictTransportSecurity(hsts -> hsts
                     .maxAgeInSeconds(31_536_000)
                     .includeSubDomains(true))
 
                 // CSP: restringe de onde recursos podem ser carregados.
-                // Ajuste as diretivas conforme os domínios de CDN/API usados em produção.
+                // Ajuste as diretivas somente quando os domínios de recursos forem definidos.
                 .contentSecurityPolicy(csp -> csp
                     .policyDirectives(
                         "default-src 'self'; " +
@@ -168,7 +167,7 @@ public class SecurityConfig {
 
     /**
      * CORS: permite apenas as origens conhecidas do frontend.
-     * Adicione a URL de produção aqui quando disponível.
+     * Adicione origens adicionais somente quando forem aprovadas.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
