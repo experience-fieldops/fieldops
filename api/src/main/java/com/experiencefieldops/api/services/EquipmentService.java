@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.experiencefieldops.api.audit.AuditLogger;
 import com.experiencefieldops.api.dto.EquipmentDto;
 import com.experiencefieldops.api.entities.Equipment;
 import com.experiencefieldops.api.entities.Location;
@@ -16,10 +17,14 @@ public class EquipmentService {
 
     private final EquipmentRepository repo;
     private final LocationRepository locationRepo;
+    private final AuditLogger auditLogger;
 
-    public EquipmentService(EquipmentRepository repo, LocationRepository locationRepo) {
+    public EquipmentService(EquipmentRepository repo,
+                            LocationRepository locationRepo,
+                            AuditLogger auditLogger) {
         this.repo = repo;
         this.locationRepo = locationRepo;
+        this.auditLogger = auditLogger;
     }
 
     public List<EquipmentDto> getAll() {
@@ -36,7 +41,9 @@ public class EquipmentService {
         e.setCreatedAt(LocalDateTime.now());
         e.setUpdatedAt(LocalDateTime.now());
         if (e.getStatus() == null) e.setStatus("ATIVO");
-        return toDto(repo.save(e));
+        EquipmentDto saved = toDto(repo.save(e));
+        auditLogger.entityCreated("Equipment", saved.id(), "system");
+        return saved;
     }
 
     public EquipmentDto update(Long id, Long locationId, Equipment e) {
@@ -50,12 +57,15 @@ public class EquipmentService {
                 locationRepo.findById(locationId).ifPresent(existing::setLocation);
             }
             existing.setUpdatedAt(LocalDateTime.now());
-            return toDto(repo.save(existing));
+            EquipmentDto updated = toDto(repo.save(existing));
+            auditLogger.entityUpdated("Equipment", updated.id(), "system");
+            return updated;
         }).orElse(null);
     }
 
     public void delete(Long id) {
         repo.deleteById(id);
+        auditLogger.entityDeleted("Equipment", id, "system");
     }
 
     private EquipmentDto toDto(Equipment e) {
