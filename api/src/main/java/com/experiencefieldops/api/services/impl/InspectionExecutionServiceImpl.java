@@ -17,8 +17,10 @@ import com.experiencefieldops.api.entities.Inspection;
 import com.experiencefieldops.api.entities.InspectionExecution;
 import com.experiencefieldops.api.entities.InspectionItemSnapshot;
 import com.experiencefieldops.api.entities.User;
+import com.experiencefieldops.api.enums.ConformityValue;
 import com.experiencefieldops.api.enums.ExecutionStatus;
 import com.experiencefieldops.api.enums.InspectionStatus;
+import com.experiencefieldops.api.enums.ResponseType;
 import com.experiencefieldops.api.enums.UserRole;
 import com.experiencefieldops.api.exception.ConflictException;
 import com.experiencefieldops.api.exception.ForbiddenException;
@@ -190,6 +192,11 @@ public class InspectionExecutionServiceImpl implements InspectionExecutionServic
                 .orElse(null);
 
         boolean notApplicable = request.getNotApplicable() != null && request.getNotApplicable();
+
+        if (!notApplicable && snapshot.getResponseType() == ResponseType.CONFORMITY
+                && request.getValue() != null && !request.getValue().isBlank()) {
+            ConformityValue.validate(request.getValue());
+        }
 
         if (existing != null) {
             existing.setValue(notApplicable ? null : request.getValue());

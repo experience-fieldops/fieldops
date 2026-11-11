@@ -164,15 +164,7 @@ public class InspectionResponseServiceImpl implements InspectionResponseService 
                             "Valor inválido para tipo BOOLEAN: '" + value + "'. Esperado: 'true' ou 'false'.");
                 }
             }
-            case CONFORMITY -> {
-                try {
-                    ConformityValue.valueOf(value.toUpperCase());
-                } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException(
-                            "Valor inválido para tipo CONFORMITY: '" + value
-                                    + "'. Esperado: CONFORMING, NON_CONFORMING ou NOT_APPLICABLE.");
-                }
-            }
+            case CONFORMITY -> ConformityValue.validate(value);
             case DATE -> {
                 if (!value.matches("\\d{4}-\\d{2}-\\d{2}")) {
                     throw new IllegalArgumentException(
