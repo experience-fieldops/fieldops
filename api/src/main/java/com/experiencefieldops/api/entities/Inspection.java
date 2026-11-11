@@ -112,4 +112,15 @@ public class Inspection {
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * Código amigável (B-04), derivado sem coluna: INSP-{ano de criação}-{id com 3+ dígitos}.
+     * Ex.: INSP-2026-007. Único porque o id é único; o número não reinicia a cada ano.
+     */
+    public String getCode() {
+        if (id == null) return null;
+        Integer year = createdAt != null ? Integer.valueOf(createdAt.getYear())
+                : scheduledDate != null ? Integer.valueOf(scheduledDate.getYear()) : null;
+        return year == null ? null : String.format("INSP-%d-%03d", year, id);
+    }
 }

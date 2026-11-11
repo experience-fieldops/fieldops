@@ -15,6 +15,7 @@ import lombok.Getter;
 public class InspectionResponse {
 
     private Long id;
+    private String code;
     private Long clientId;
     private String clientName;
     private Long siteId;
@@ -45,6 +46,7 @@ public class InspectionResponse {
     public static InspectionResponse from(Inspection inspection) {
         return InspectionResponse.builder()
                 .id(inspection.getId())
+                .code(inspection.getCode())
                 .clientId(inspection.getClient().getId())
                 .clientName(inspection.getClient().getName())
                 .siteId(inspection.getSite().getId())
@@ -75,6 +77,7 @@ public class InspectionResponse {
         InspectionResponse response = from(inspection);
         return InspectionResponse.builder()
                 .id(response.getId())
+                .code(response.getCode())
                 .clientId(response.getClientId())
                 .clientName(response.getClientName())
                 .siteId(response.getSiteId())
