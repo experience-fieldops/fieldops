@@ -687,6 +687,7 @@ public class DataSeeder implements ApplicationRunner {
                 .equipment(equipment)
                 .scheduledDate(LocalDate.of(2026, 10, 15))
                 .status(InspectionStatus.SCHEDULED)
+                .priority(InspectionPriority.HIGH)
                 .build());
     }
 
@@ -703,6 +704,7 @@ public class DataSeeder implements ApplicationRunner {
                 .equipment(equipment)
                 .scheduledDate(LocalDate.of(2026, 10, 15))
                 .status(InspectionStatus.IN_PROGRESS)
+                .priority(InspectionPriority.MEDIUM)
                 .startedAtDevice(LocalDateTime.of(2026, 10, 15, 8, 0, 0))
                 .startedAtServer(LocalDateTime.of(2026, 10, 15, 8, 0, 5))
                 .build());
@@ -721,6 +723,7 @@ public class DataSeeder implements ApplicationRunner {
                 .equipment(equipment)
                 .scheduledDate(LocalDate.of(2026, 10, 14))
                 .status(InspectionStatus.COMPLETED)
+                .priority(InspectionPriority.LOW)
                 .startedAtDevice(LocalDateTime.of(2026, 10, 14, 7, 30, 0))
                 .startedAtServer(LocalDateTime.of(2026, 10, 14, 7, 30, 8))
                 .completedAtDevice(LocalDateTime.of(2026, 10, 14, 10, 0, 0))
