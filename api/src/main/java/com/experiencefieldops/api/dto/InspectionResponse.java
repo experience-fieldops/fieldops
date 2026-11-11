@@ -24,6 +24,7 @@ public class InspectionResponse {
     private Long templateVersionId;
     private Integer templateVersionNumber;
     private String templateTitle;
+    private Integer estimatedMinutes;
     private Long equipmentId;
     private String equipmentName;
     private LocalDate scheduledDate;
@@ -54,6 +55,8 @@ public class InspectionResponse {
                 .templateVersionId(inspection.getTemplateVersion().getId())
                 .templateVersionNumber(inspection.getTemplateVersion().getVersionNumber())
                 .templateTitle(inspection.getTemplateVersion().getTitleSnapshot())
+                .estimatedMinutes(inspection.getTemplateVersion().getTemplate() != null
+                        ? inspection.getTemplateVersion().getTemplate().getEstimatedMinutes() : null)
                 .equipmentId(inspection.getEquipment() != null ? inspection.getEquipment().getId() : null)
                 .equipmentName(inspection.getEquipment() != null ? inspection.getEquipment().getName() : null)
                 .scheduledDate(inspection.getScheduledDate())
@@ -84,6 +87,7 @@ public class InspectionResponse {
                 .templateVersionId(response.getTemplateVersionId())
                 .templateVersionNumber(response.getTemplateVersionNumber())
                 .templateTitle(response.getTemplateTitle())
+                .estimatedMinutes(response.getEstimatedMinutes())
                 .equipmentId(response.getEquipmentId())
                 .equipmentName(response.getEquipmentName())
                 .scheduledDate(response.getScheduledDate())
