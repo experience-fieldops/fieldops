@@ -45,6 +45,7 @@ public class InspectionTemplateServiceImpl implements InspectionTemplateService 
                 .title(request.getTitle())
                 .description(request.getDescription())
                 .category(request.getCategory())
+                .estimatedMinutes(request.getEstimatedMinutes())
                 .status(TemplateStatus.DRAFT)
                 .currentVersion(0)
                 .build();
@@ -78,6 +79,7 @@ public class InspectionTemplateServiceImpl implements InspectionTemplateService 
         template.setTitle(request.getTitle());
         template.setDescription(request.getDescription());
         template.setCategory(request.getCategory());
+        template.setEstimatedMinutes(request.getEstimatedMinutes());
 
         return TemplateResponse.from(templateRepository.save(template));
     }

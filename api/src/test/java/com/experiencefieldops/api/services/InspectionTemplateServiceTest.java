@@ -51,6 +51,7 @@ class InspectionTemplateServiceTest {
         r.setTitle("Inspeção de Compressores");
         r.setDescription("Checklist mecânico");
         r.setCategory("MECANICO");
+        r.setEstimatedMinutes(45);
         return r;
     }
 
@@ -77,6 +78,7 @@ class InspectionTemplateServiceTest {
         assertThat(captor.getValue().getStatus()).isEqualTo(TemplateStatus.DRAFT);
         assertThat(captor.getValue().getCurrentVersion()).isZero();
         assertThat(response.getTitle()).isEqualTo("Inspeção de Compressores");
+        assertThat(response.getEstimatedMinutes()).isEqualTo(45); // B-05
     }
 
     @Test

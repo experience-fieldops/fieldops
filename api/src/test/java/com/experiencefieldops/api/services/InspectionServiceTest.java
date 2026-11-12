@@ -270,6 +270,7 @@ class InspectionServiceTest {
 
         assertThat(response).isNotNull();
         assertThat(response.getClientId()).isEqualTo(1L);
+        assertThat(response.getPriority()).isEqualTo(com.experiencefieldops.api.enums.InspectionPriority.MEDIUM); // padrão B-02
         verify(auditLogService).log(isNull(), anyString(), eq(AuditAction.CREATE),
                 eq("Inspection"), eq(1L), anyString());
     }

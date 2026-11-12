@@ -1,6 +1,7 @@
 package com.experiencefieldops.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,4 +20,8 @@ public class TemplateRequest {
     @NotBlank(message = "Categoria é obrigatória")
     @Size(max = 100, message = "Categoria deve ter no máximo 100 caracteres")
     private String category;
+
+    // Opcional (B-05)
+    @Positive(message = "Tempo estimado deve ser maior que zero")
+    private Integer estimatedMinutes;
 }

@@ -44,6 +44,9 @@ public class InspectionTemplate {
     @Column(nullable = false, length = 100)
     private String category;
 
+    // Tempo estimado de execução em minutos (B-05); opcional, herdado pelas inspeções
+    private Integer estimatedMinutes;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private TemplateStatus status;

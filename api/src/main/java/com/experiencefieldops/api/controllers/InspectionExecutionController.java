@@ -25,6 +25,8 @@ import com.experiencefieldops.api.util.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.experiencefieldops.api.security.CurrentUserService;
+
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -34,6 +36,7 @@ import lombok.RequiredArgsConstructor;
 public class InspectionExecutionController {
 
     private final InspectionExecutionService executionService;
+    private final CurrentUserService currentUser;
 
     // ═════════════════════════════════════════════════════════════════════════
     // EXECUTION ENDPOINTS
@@ -45,11 +48,11 @@ public class InspectionExecutionController {
     public ResponseEntity<ApiResponse<ExecutionResponse>> start(
             @PathVariable Long inspectionId,
             @Valid @RequestBody StartExecutionRequest request,
-            @RequestParam Long requestingUserId) {
+            @RequestParam(required = false) Long requestingUserId) {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
-                        executionService.start(inspectionId, request, requestingUserId),
+                        executionService.start(inspectionId, request, currentUser.actorId(requestingUserId)),
                         "Execução iniciada com sucesso"));
     }
 
@@ -59,10 +62,10 @@ public class InspectionExecutionController {
     public ResponseEntity<ApiResponse<ExecutionResponse>> complete(
             @PathVariable Long executionId,
             @Valid @RequestBody CompleteExecutionRequest request,
-            @RequestParam Long requestingUserId) {
+            @RequestParam(required = false) Long requestingUserId) {
 
         return ResponseEntity.ok(ApiResponse.success(
-                executionService.complete(executionId, request, requestingUserId),
+                executionService.complete(executionId, request, currentUser.actorId(requestingUserId)),
                 "Execução finalizada com sucesso"));
     }
 
@@ -71,10 +74,10 @@ public class InspectionExecutionController {
     @PreAuthorize("hasAnyRole('TECNICO', 'ADMIN')")
     public ResponseEntity<ApiResponse<ExecutionResponse>> pause(
             @PathVariable Long executionId,
-            @RequestParam Long requestingUserId) {
+            @RequestParam(required = false) Long requestingUserId) {
 
         return ResponseEntity.ok(ApiResponse.success(
-                executionService.pause(executionId, requestingUserId),
+                executionService.pause(executionId, currentUser.actorId(requestingUserId)),
                 "Execução pausada"));
     }
 
@@ -100,11 +103,11 @@ public class InspectionExecutionController {
     public ResponseEntity<ApiResponse<ChecklistResponseDTO>> saveResponse(
             @PathVariable Long executionId,
             @Valid @RequestBody ChecklistResponseRequest request,
-            @RequestParam Long requestingUserId) {
+            @RequestParam(required = false) Long requestingUserId) {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
-                        executionService.saveResponse(executionId, request, requestingUserId),
+                        executionService.saveResponse(executionId, request, currentUser.actorId(requestingUserId)),
                         "Resposta registrada com sucesso"));
     }
 
