@@ -14,4 +14,6 @@ public interface ChecklistResponseRepository extends JpaRepository<ChecklistResp
     Optional<ChecklistResponse> findByExecutionIdAndSnapshotItemId(Long executionId, Long snapshotItemId);
 
     long countByExecutionId(Long executionId);
+
+    List<ChecklistResponse> findByExecutionInspectionId(Long inspectionId);
 }

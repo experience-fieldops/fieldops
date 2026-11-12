@@ -1,6 +1,8 @@
 package com.experiencefieldops.api.services.impl;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import com.experiencefieldops.api.enums.InspectionStatus;
 import com.experiencefieldops.api.enums.ResponseType;
 import com.experiencefieldops.api.exception.ConflictException;
 import com.experiencefieldops.api.exception.ResourceNotFoundException;
+import com.experiencefieldops.api.repositories.ChecklistResponseRepository;
 import com.experiencefieldops.api.repositories.InspectionItemSnapshotRepository;
 import com.experiencefieldops.api.repositories.InspectionRepository;
 import com.experiencefieldops.api.repositories.InspectionResponseRepository;
@@ -31,6 +34,7 @@ public class InspectionResponseServiceImpl implements InspectionResponseService 
     private final InspectionResponseRepository responseRepository;
     private final InspectionRepository inspectionRepository;
     private final InspectionItemSnapshotRepository snapshotRepository;
+    private final ChecklistResponseRepository checklistResponseRepository;
 
     @Override
     @Transactional
@@ -107,15 +111,18 @@ public class InspectionResponseServiceImpl implements InspectionResponseService 
 
         int totalItems = allItems.size();
 
-        List<InspectionResponse> responses = responseRepository.findByInspectionId(inspectionId);
+        // Conta por item, somando os dois fluxos de resposta (B-03): /inspections/{id}/responses + sync
+        // (inspection_responses) e /executions/{id}/responses, usado pelo app (checklist_responses).
+        Set<Long> answered = new HashSet<>();
+        Set<Long> notApplicable = new HashSet<>();
+        responseRepository.findByInspectionId(inspectionId).forEach(r ->
+                (Boolean.TRUE.equals(r.getNotApplicable()) ? notApplicable : answered).add(r.getSnapshotItem().getId()));
+        checklistResponseRepository.findByExecutionInspectionId(inspectionId).forEach(r ->
+                (Boolean.TRUE.equals(r.getNotApplicable()) ? notApplicable : answered).add(r.getSnapshotItem().getId()));
+        notApplicable.removeAll(answered); // item com valor em algum fluxo conta como respondido
 
-        long notApplicableItems = responses.stream()
-                .filter(r -> Boolean.TRUE.equals(r.getNotApplicable()))
-                .count();
-
-        long answeredItems = responses.stream()
-                .filter(r -> !Boolean.TRUE.equals(r.getNotApplicable()))
-                .count();
+        long notApplicableItems = notApplicable.size();
+        long answeredItems = answered.size();
 
         int applicableItems = totalItems - (int) notApplicableItems;
         int pendingItems = Math.max(0, applicableItems - (int) answeredItems);
