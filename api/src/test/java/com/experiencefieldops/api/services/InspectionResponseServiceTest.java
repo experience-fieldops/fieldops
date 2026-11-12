@@ -37,6 +37,7 @@ class InspectionResponseServiceTest {
     @Mock private InspectionResponseRepository responseRepository;
     @Mock private InspectionRepository inspectionRepository;
     @Mock private InspectionItemSnapshotRepository snapshotRepository;
+    @Mock private com.experiencefieldops.api.repositories.ChecklistResponseRepository checklistResponseRepository;
 
     @InjectMocks
     private InspectionResponseServiceImpl service;
@@ -157,12 +158,13 @@ class InspectionResponseServiceTest {
         when(snapshotRepository.findByInspectionIdOrderBySectionDisplayOrderAscItemDisplayOrderAsc(1L))
                 .thenReturn(itens);
 
-        // 2 respostas: 1 respondida + 1 não aplicável
+        // fluxo /inspections/{id}/responses: item 1 respondido, item 2 N/A
         InspectionResponse respondida = InspectionResponse.builder()
-                .id(1L).notApplicable(false).value("10").build();
+                .id(1L).snapshotItem(itens.get(0)).notApplicable(false).value("10").build();
         InspectionResponse na = InspectionResponse.builder()
-                .id(2L).notApplicable(true).build();
+                .id(2L).snapshotItem(itens.get(1)).notApplicable(true).build();
         when(responseRepository.findByInspectionId(1L)).thenReturn(List.of(respondida, na));
+        when(checklistResponseRepository.findByExecutionInspectionId(1L)).thenReturn(List.of());
 
         InspectionProgressResponse progress = service.getProgress(1L);
 
@@ -172,6 +174,33 @@ class InspectionResponseServiceTest {
         assertThat(progress.getApplicableItems()).isEqualTo(3);
         assertThat(progress.getAnsweredItems()).isEqualTo(1);
         assertThat(progress.getProgressPercentage()).isEqualTo(33.3);
+    }
+
+    @Test
+    void getProgress_deveContarRespostasDoFluxoDeExecucaoSemDuplicar() {
+        Inspection insp = inspection(1L, InspectionStatus.IN_PROGRESS);
+        when(inspectionRepository.findById(1L)).thenReturn(Optional.of(insp));
+        List<InspectionItemSnapshot> itens = List.of(
+                snapshot(1L, insp, ResponseType.NUMBER, true, false),
+                snapshot(2L, insp, ResponseType.NUMBER, true, false),
+                snapshot(3L, insp, ResponseType.NUMBER, true, false));
+        when(snapshotRepository.findByInspectionIdOrderBySectionDisplayOrderAscItemDisplayOrderAsc(1L))
+                .thenReturn(itens);
+        when(responseRepository.findByInspectionId(1L)).thenReturn(List.of(
+                InspectionResponse.builder().snapshotItem(itens.get(0)).notApplicable(false).value("1").build()));
+        // app (checklist_responses): item 1 de novo (não duplica), item 2 N/A, item 2 respondido em outra execução
+        when(checklistResponseRepository.findByExecutionInspectionId(1L)).thenReturn(List.of(
+                com.experiencefieldops.api.entities.ChecklistResponse.builder().snapshotItem(itens.get(0)).notApplicable(false).build(),
+                com.experiencefieldops.api.entities.ChecklistResponse.builder().snapshotItem(itens.get(1)).notApplicable(true).build(),
+                com.experiencefieldops.api.entities.ChecklistResponse.builder().snapshotItem(itens.get(1)).notApplicable(false).build()));
+
+        InspectionProgressResponse progress = service.getProgress(1L);
+
+        // itens 1 e 2 respondidos (valor prevalece sobre N/A), item 3 pendente → 2/3
+        assertThat(progress.getAnsweredItems()).isEqualTo(2);
+        assertThat(progress.getNotApplicableItems()).isZero();
+        assertThat(progress.getPendingItems()).isEqualTo(1);
+        assertThat(progress.getProgressPercentage()).isEqualTo(66.7);
     }
 
     // ── findAll ─────────────────────────────────────────────────────────────

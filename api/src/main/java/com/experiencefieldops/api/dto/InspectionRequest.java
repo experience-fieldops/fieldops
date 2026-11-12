@@ -2,6 +2,8 @@ package com.experiencefieldops.api.dto;
 
 import java.time.LocalDate;
 
+import com.experiencefieldops.api.enums.InspectionPriority;
+
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
@@ -29,4 +31,7 @@ public class InspectionRequest {
     @NotNull(message = "Data prevista é obrigatória")
     @FutureOrPresent(message = "Data prevista não pode ser no passado")
     private LocalDate scheduledDate;
+
+    // Opcional — padrão MEDIUM (B-02)
+    private InspectionPriority priority;
 }

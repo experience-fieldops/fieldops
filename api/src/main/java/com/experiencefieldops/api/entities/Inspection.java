@@ -3,6 +3,7 @@ package com.experiencefieldops.api.entities;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.experiencefieldops.api.enums.InspectionPriority;
 import com.experiencefieldops.api.enums.InspectionStatus;
 
 import jakarta.persistence.Column;
@@ -71,6 +72,11 @@ public class Inspection {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 15)
     private InspectionStatus status;
+
+    // Nullable no banco: linhas antigas (antes do B-02) ficam null e saem como MEDIUM na API
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private InspectionPriority priority;
 
     // ── Execução (RN-034) ─────────────────────────────────────────────────
     // Data/hora capturada no dispositivo do técnico
