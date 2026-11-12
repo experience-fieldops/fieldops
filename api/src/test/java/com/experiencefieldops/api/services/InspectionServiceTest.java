@@ -64,6 +64,7 @@ class InspectionServiceTest {
     @Mock private TemplateSectionRepository sectionRepository;
     @Mock private TemplateItemRepository itemRepository;
     @Mock private AuditLogService auditLogService;
+    @Mock private com.experiencefieldops.api.repositories.NonConformityRepository nonConformityRepository;
 
     @InjectMocks
     private InspectionServiceImpl service;
@@ -409,5 +410,19 @@ class InspectionServiceTest {
 
         assertThatThrownBy(() -> service.findById(404L))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void complete_deveBloquearComNcCriticaSemEvidencia() {
+        User tec = tecnico(10L);
+        Inspection insp = inspection(1L, InspectionStatus.IN_PROGRESS, tec);
+        when(inspectionRepository.findById(1L)).thenReturn(Optional.of(insp));
+        when(nonConformityRepository.existsByInspectionIdAndStatus(1L,
+                com.experiencefieldops.api.enums.NonConformityStatus.PENDING_EVIDENCE)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.complete(1L, new InspectionCompleteRequest(), 10L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("RN-055");
+        assertThat(insp.getStatus()).isEqualTo(InspectionStatus.IN_PROGRESS);
     }
 }

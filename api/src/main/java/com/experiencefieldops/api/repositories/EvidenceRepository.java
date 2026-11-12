@@ -13,4 +13,6 @@ public interface EvidenceRepository extends JpaRepository<Evidence, Long> {
     List<Evidence> findByInspectionIdAndDeletedAtIsNull(Long inspectionId);
 
     Optional<Evidence> findByIdAndDeletedAtIsNull(Long id);
+
+    boolean existsByNonConformityIdAndDeletedAtIsNull(Long nonConformityId);
 }
