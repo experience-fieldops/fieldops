@@ -19,6 +19,8 @@ import com.experiencefieldops.api.services.InspectionReviewService;
 import com.experiencefieldops.api.util.ApiResponse;
 
 import jakarta.validation.Valid;
+import com.experiencefieldops.api.security.CurrentUserService;
+
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -26,21 +28,21 @@ import lombok.RequiredArgsConstructor;
 public class InspectionReviewController {
 
     private final InspectionReviewService reviewService;
+    private final CurrentUserService currentUser;
 
     /**
      * POST /api/v1/inspections/{id}/reviews
      * Supervisor inicia revisão de inspeção concluída.
-     * TODO: reviewerId virá do JWT quando auth estiver pronto.
      */
     @PostMapping("/api/v1/inspections/{id}/reviews")
     public ResponseEntity<ApiResponse<ReviewResponse>> startReview(
             @PathVariable Long id,
             @Valid @RequestBody ReviewRequest request,
-            @RequestParam Long reviewerId) {
+            @RequestParam(required = false) Long reviewerId) {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
-                        reviewService.startReview(id, request, reviewerId),
+                        reviewService.startReview(id, request, currentUser.actorId(reviewerId)),
                         "Revisão iniciada com sucesso"));
     }
 
@@ -71,10 +73,10 @@ public class InspectionReviewController {
     public ResponseEntity<ApiResponse<ReviewResponse>> approve(
             @PathVariable Long id,
             @Valid @RequestBody ApproveRequest request,
-            @RequestParam Long reviewerId) {
+            @RequestParam(required = false) Long reviewerId) {
 
         return ResponseEntity.ok(ApiResponse.success(
-                reviewService.approve(id, request, reviewerId),
+                reviewService.approve(id, request, currentUser.actorId(reviewerId)),
                 "Inspeção aprovada com sucesso"));
     }
 
@@ -88,10 +90,10 @@ public class InspectionReviewController {
     public ResponseEntity<ApiResponse<ReviewResponse>> reject(
             @PathVariable Long id,
             @Valid @RequestBody RejectRequest request,
-            @RequestParam Long reviewerId) {
+            @RequestParam(required = false) Long reviewerId) {
 
         return ResponseEntity.ok(ApiResponse.success(
-                reviewService.reject(id, request, reviewerId),
+                reviewService.reject(id, request, currentUser.actorId(reviewerId)),
                 "Inspeção reprovada"));
     }
 }

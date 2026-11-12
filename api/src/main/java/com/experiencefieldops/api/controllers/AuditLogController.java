@@ -21,6 +21,8 @@ import com.experiencefieldops.api.repositories.UserRepository;
 import com.experiencefieldops.api.services.AuditLogService;
 import com.experiencefieldops.api.util.ApiResponse;
 
+import com.experiencefieldops.api.security.CurrentUserService;
+
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -29,12 +31,12 @@ import lombok.RequiredArgsConstructor;
 public class AuditLogController {
 
     private final AuditLogService auditLogService;
+    private final CurrentUserService currentUser;
     private final UserRepository userRepository;
 
     /**
      * GET /api/v1/audit-logs
      * Somente ADMIN e SUPERVISOR podem consultar logs.
-     * TODO: requestingUserId virá do JWT quando auth estiver pronto.
      */
     @GetMapping
     public ResponseEntity<ApiResponse<Page<AuditLogResponse>>> findAll(
@@ -43,10 +45,10 @@ public class AuditLogController {
             @RequestParam(required = false) Long actorId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
-            @RequestParam Long requestingUserId,
+            @RequestParam(required = false) Long requestingUserId,
             @PageableDefault(size = 50, sort = "createdAt") Pageable pageable) {
 
-        assertAdminOrSupervisor(requestingUserId);
+        assertAdminOrSupervisor(currentUser.actorId(requestingUserId));
 
         return ResponseEntity.ok(ApiResponse.success(
                 auditLogService.findAll(entityType, action, actorId, from, to, pageable)));
@@ -59,9 +61,9 @@ public class AuditLogController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AuditLogResponse>> findById(
             @PathVariable Long id,
-            @RequestParam Long requestingUserId) {
+            @RequestParam(required = false) Long requestingUserId) {
 
-        assertAdminOrSupervisor(requestingUserId);
+        assertAdminOrSupervisor(currentUser.actorId(requestingUserId));
         return ResponseEntity.ok(ApiResponse.success(auditLogService.findById(id)));
     }
 
