@@ -8,6 +8,7 @@ import com.experiencefieldops.api.dto.InspectionCompleteRequest;
 import com.experiencefieldops.api.dto.InspectionRequest;
 import com.experiencefieldops.api.dto.InspectionResponse;
 import com.experiencefieldops.api.dto.InspectionStartRequest;
+import com.experiencefieldops.api.dto.TechnicianMetricsResponse;
 import com.experiencefieldops.api.enums.InspectionStatus;
 
 public interface InspectionService {
@@ -26,4 +27,6 @@ public interface InspectionService {
     InspectionResponse complete(Long id, InspectionCompleteRequest request, Long requestingUserId);
 
     InspectionResponse cancel(Long id, InspectionCancelRequest request, Long requestingUserId);
+
+    TechnicianMetricsResponse getTechnicianMetrics(Long technicianId);
 }
