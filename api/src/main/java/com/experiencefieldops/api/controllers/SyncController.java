@@ -24,6 +24,8 @@ import com.experiencefieldops.api.util.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import com.experiencefieldops.api.security.CurrentUserService;
+
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -33,6 +35,7 @@ import lombok.RequiredArgsConstructor;
 public class SyncController {
 
     private final SyncService syncService;
+    private final CurrentUserService currentUser;
 
     // ── Endpoint novo — Issue #27 ─────────────────────────────────────────────
 
@@ -44,7 +47,6 @@ public class SyncController {
      * Retorna { synced: [...], failed: [...] } com o resultado individual de cada item.
      *
      * Sempre retorna HTTP 200 — falhas parciais ficam em failed[].
-     * TODO: technicianId virá do JWT.
      */
     @Operation(summary = "Sincronizar dados offline",
             description = "Recebe lote offline e retorna { synced: [], failed: [] } com SyncLog registrado")
@@ -52,9 +54,9 @@ public class SyncController {
     @PreAuthorize("hasAnyRole('TECNICO', 'ADMIN')")
     public ResponseEntity<ApiResponse<SyncResponse>> sync(
             @Valid @RequestBody SyncRequest request,
-            @RequestParam Long technicianId) {
+            @RequestParam(required = false) Long technicianId) {
 
-        SyncResponse response = syncService.sync(request, technicianId);
+        SyncResponse response = syncService.sync(request, currentUser.actorId(technicianId));
 
         String msg = "Lote processado: " + response.getSynced().size()
                 + " sincronizados, " + response.getFailed().size() + " falhas";
@@ -67,16 +69,15 @@ public class SyncController {
      *
      * Retorna inspeções SCHEDULED e IN_PROGRESS atribuídas ao técnico,
      * com template completo (seções + itens) para download offline.
-     * TODO: technicianId virá do JWT.
      */
     @Operation(summary = "Ordens disponíveis para download offline",
             description = "Lista inspeções SCHEDULED e IN_PROGRESS do técnico com template completo")
     @GetMapping("/my-orders/pending-sync")
     @PreAuthorize("hasAnyRole('TECNICO', 'ADMIN')")
     public ResponseEntity<ApiResponse<List<PendingSyncInspectionResponse>>> getPendingSync(
-            @RequestParam Long technicianId) {
+            @RequestParam(required = false) Long technicianId) {
 
-        return ResponseEntity.ok(ApiResponse.success(syncService.getPendingSync(technicianId)));
+        return ResponseEntity.ok(ApiResponse.success(syncService.getPendingSync(currentUser.technicianId(technicianId))));
     }
 
     // ── Endpoints legados — mantidos para retrocompatibilidade ────────────────
@@ -89,9 +90,9 @@ public class SyncController {
     @PostMapping("/sync/batch")
     public ResponseEntity<ApiResponse<SyncBatchResponse>> processBatch(
             @Valid @RequestBody SyncBatchRequest request,
-            @RequestParam Long technicianId) {
+            @RequestParam(required = false) Long technicianId) {
 
-        SyncBatchResponse response = syncService.processBatch(request, technicianId);
+        SyncBatchResponse response = syncService.processBatch(request, currentUser.actorId(technicianId));
 
         return ResponseEntity.ok(ApiResponse.success(response,
                 "Lote processado: " + response.getSucceeded() + " ok, "

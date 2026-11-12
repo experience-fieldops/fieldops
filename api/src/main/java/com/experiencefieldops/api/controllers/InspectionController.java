@@ -24,6 +24,8 @@ import com.experiencefieldops.api.services.InspectionService;
 import com.experiencefieldops.api.util.ApiResponse;
 
 import jakarta.validation.Valid;
+import com.experiencefieldops.api.security.CurrentUserService;
+
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -32,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 public class InspectionController {
 
     private final InspectionService inspectionService;
+    private final CurrentUserService currentUser;
 
     /**
      * POST /api/v1/inspections
@@ -72,30 +75,28 @@ public class InspectionController {
     /**
      * GET /api/v1/inspections/assigned
      * Lista inspeções atribuídas ao técnico informado.
-     * TODO: quando auth estiver implementado, extrair technicianId do JWT.
      */
     @GetMapping("/assigned")
     public ResponseEntity<ApiResponse<Page<InspectionResponse>>> findAssigned(
-            @RequestParam Long technicianId,
+            @RequestParam(required = false) Long technicianId,
             @PageableDefault(size = 20, sort = "scheduledDate") Pageable pageable) {
 
         return ResponseEntity.ok(ApiResponse.success(
-                inspectionService.findAssigned(technicianId, pageable)));
+                inspectionService.findAssigned(currentUser.technicianId(technicianId), pageable)));
     }
 
     /**
      * PATCH /api/v1/inspections/{id}/start
      * Técnico inicia a inspeção (SCHEDULED → IN_PROGRESS).
-     * TODO: requestingUserId virá do JWT quando auth estiver pronto.
      */
     @PatchMapping("/{id}/start")
     public ResponseEntity<ApiResponse<InspectionResponse>> start(
             @PathVariable Long id,
             @Valid @RequestBody InspectionStartRequest request,
-            @RequestParam Long requestingUserId) {
+            @RequestParam(required = false) Long requestingUserId) {
 
         return ResponseEntity.ok(ApiResponse.success(
-                inspectionService.start(id, request, requestingUserId),
+                inspectionService.start(id, request, currentUser.actorId(requestingUserId)),
                 "Inspeção iniciada com sucesso"));
     }
 
@@ -107,10 +108,10 @@ public class InspectionController {
     public ResponseEntity<ApiResponse<InspectionResponse>> complete(
             @PathVariable Long id,
             @Valid @RequestBody InspectionCompleteRequest request,
-            @RequestParam Long requestingUserId) {
+            @RequestParam(required = false) Long requestingUserId) {
 
         return ResponseEntity.ok(ApiResponse.success(
-                inspectionService.complete(id, request, requestingUserId),
+                inspectionService.complete(id, request, currentUser.actorId(requestingUserId)),
                 "Inspeção concluída com sucesso"));
     }
 
@@ -122,10 +123,10 @@ public class InspectionController {
     public ResponseEntity<ApiResponse<InspectionResponse>> cancel(
             @PathVariable Long id,
             @Valid @RequestBody InspectionCancelRequest request,
-            @RequestParam Long requestingUserId) {
+            @RequestParam(required = false) Long requestingUserId) {
 
         return ResponseEntity.ok(ApiResponse.success(
-                inspectionService.cancel(id, request, requestingUserId),
+                inspectionService.cancel(id, request, currentUser.actorId(requestingUserId)),
                 "Inspeção cancelada"));
     }
 }
