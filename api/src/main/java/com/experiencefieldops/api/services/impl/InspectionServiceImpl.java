@@ -1,7 +1,9 @@
 package com.experiencefieldops.api.services.impl;
 
 import java.time.LocalDateTime;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -16,6 +18,7 @@ import com.experiencefieldops.api.dto.InspectionItemSnapshotResponse;
 import com.experiencefieldops.api.dto.InspectionRequest;
 import com.experiencefieldops.api.dto.InspectionResponse;
 import com.experiencefieldops.api.dto.InspectionStartRequest;
+import com.experiencefieldops.api.dto.TechnicianMetricsResponse;
 import com.experiencefieldops.api.entities.Client;
 import com.experiencefieldops.api.entities.Equipment;
 import com.experiencefieldops.api.entities.Inspection;
@@ -118,6 +121,32 @@ public class InspectionServiceImpl implements InspectionService {
         return inspectionRepository
                 .findAll(Specification.where(hasTechnician(technicianId)), pageable)
                 .map(InspectionResponse::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TechnicianMetricsResponse getTechnicianMetrics(Long technicianId) {
+        if (!userRepository.existsById(technicianId)) {
+            throw new ResourceNotFoundException("Técnico não encontrado: " + technicianId);
+        }
+        Map<InspectionStatus, Long> byStatus = new EnumMap<>(InspectionStatus.class);
+        inspectionRepository.countByStatusForTechnician(technicianId)
+                .forEach(row -> byStatus.put((InspectionStatus) row[0], (Long) row[1]));
+
+        // Mesma regra que o app usava no M9 (B-07)
+        long approved = byStatus.getOrDefault(InspectionStatus.APPROVED, 0L);
+        long completed = approved
+                + byStatus.getOrDefault(InspectionStatus.COMPLETED, 0L)
+                + byStatus.getOrDefault(InspectionStatus.UNDER_REVIEW, 0L);
+        double approvalRate = completed == 0 ? 0.0 : Math.round(approved * 1000.0 / completed) / 10.0;
+
+        return TechnicianMetricsResponse.builder()
+                .technicianId(technicianId)
+                .completedCount(completed)
+                .approvedCount(approved)
+                .rejectedCount(byStatus.getOrDefault(InspectionStatus.REJECTED, 0L))
+                .approvalRate(approvalRate)
+                .build();
     }
 
     @Override

@@ -411,4 +411,35 @@ class InspectionServiceTest {
         assertThatThrownBy(() -> service.findById(404L))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
+
+    // ── métricas do técnico (B-07) ─────────────────────────────────────────
+
+    @Test
+    void getTechnicianMetrics_deveCalcularPelaRegraDoApp() {
+        when(userRepository.existsById(10L)).thenReturn(true);
+        when(inspectionRepository.countByStatusForTechnician(10L)).thenReturn(List.of(
+                new Object[] {InspectionStatus.APPROVED, 3L},
+                new Object[] {InspectionStatus.COMPLETED, 1L},
+                new Object[] {InspectionStatus.UNDER_REVIEW, 2L},
+                new Object[] {InspectionStatus.REJECTED, 4L},
+                new Object[] {InspectionStatus.SCHEDULED, 9L}));
+
+        var m = service.getTechnicianMetrics(10L);
+
+        assertThat(m.getCompletedCount()).isEqualTo(6);   // 3 + 1 + 2
+        assertThat(m.getApprovedCount()).isEqualTo(3);
+        assertThat(m.getRejectedCount()).isEqualTo(4);
+        assertThat(m.getApprovalRate()).isEqualTo(50.0);  // 3 / 6
+    }
+
+    @Test
+    void getTechnicianMetrics_semConcluidasRetornaZeroEInexistenteDa404() {
+        when(userRepository.existsById(10L)).thenReturn(true);
+        when(inspectionRepository.countByStatusForTechnician(10L)).thenReturn(List.of());
+        assertThat(service.getTechnicianMetrics(10L).getApprovalRate()).isZero();
+
+        when(userRepository.existsById(99L)).thenReturn(false);
+        assertThatThrownBy(() -> service.getTechnicianMetrics(99L))
+                .isInstanceOf(com.experiencefieldops.api.exception.ResourceNotFoundException.class);
+    }
 }
