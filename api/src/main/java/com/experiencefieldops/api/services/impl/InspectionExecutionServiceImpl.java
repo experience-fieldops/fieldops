@@ -17,11 +17,9 @@ import com.experiencefieldops.api.entities.Inspection;
 import com.experiencefieldops.api.entities.InspectionExecution;
 import com.experiencefieldops.api.entities.InspectionItemSnapshot;
 import com.experiencefieldops.api.entities.User;
-import com.experiencefieldops.api.enums.ConformityValue;
 import com.experiencefieldops.api.enums.ExecutionStatus;
 import com.experiencefieldops.api.enums.InspectionStatus;
 import com.experiencefieldops.api.enums.NonConformityStatus;
-import com.experiencefieldops.api.enums.ResponseType;
 import com.experiencefieldops.api.enums.UserRole;
 import com.experiencefieldops.api.exception.ConflictException;
 import com.experiencefieldops.api.exception.ForbiddenException;
@@ -32,6 +30,7 @@ import com.experiencefieldops.api.repositories.InspectionItemSnapshotRepository;
 import com.experiencefieldops.api.repositories.InspectionRepository;
 import com.experiencefieldops.api.repositories.UserRepository;
 import com.experiencefieldops.api.services.InspectionExecutionService;
+import com.experiencefieldops.api.util.ResponseValueValidator;
 
 import lombok.RequiredArgsConstructor;
 
@@ -198,9 +197,8 @@ public class InspectionExecutionServiceImpl implements InspectionExecutionServic
 
         boolean notApplicable = request.getNotApplicable() != null && request.getNotApplicable();
 
-        if (!notApplicable && snapshot.getResponseType() == ResponseType.CONFORMITY
-                && request.getValue() != null && !request.getValue().isBlank()) {
-            ConformityValue.validate(request.getValue());
+        if (!notApplicable) {
+            ResponseValueValidator.validate(snapshot, request.getValue()); // mesmo formato do outro fluxo (B-09)
         }
 
         if (existing != null) {

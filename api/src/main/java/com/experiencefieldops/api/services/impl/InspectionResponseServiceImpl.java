@@ -24,6 +24,7 @@ import com.experiencefieldops.api.repositories.InspectionItemSnapshotRepository;
 import com.experiencefieldops.api.repositories.InspectionRepository;
 import com.experiencefieldops.api.repositories.InspectionResponseRepository;
 import com.experiencefieldops.api.services.InspectionResponseService;
+import com.experiencefieldops.api.util.ResponseValueValidator;
 
 import lombok.RequiredArgsConstructor;
 
@@ -146,8 +147,6 @@ public class InspectionResponseServiceImpl implements InspectionResponseService 
      * Valida o valor conforme o response_type do item (RN-036).
      */
     private void validateValue(InspectionItemSnapshot item, String value) {
-        ResponseType type = item.getResponseType();
-
         if (value == null || value.isBlank()) {
             if (Boolean.TRUE.equals(item.getRequired())) {
                 throw new IllegalArgumentException(
@@ -156,39 +155,7 @@ public class InspectionResponseServiceImpl implements InspectionResponseService 
             return; // opcional sem valor — ok
         }
 
-        switch (type) {
-            case NUMBER -> {
-                try {
-                    Double.parseDouble(value);
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException(
-                            "Valor inválido para tipo NUMBER: '" + value + "'. Esperado: número decimal.");
-                }
-            }
-            case BOOLEAN -> {
-                if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
-                    throw new IllegalArgumentException(
-                            "Valor inválido para tipo BOOLEAN: '" + value + "'. Esperado: 'true' ou 'false'.");
-                }
-            }
-            case CONFORMITY -> ConformityValue.validate(value);
-            case DATE -> {
-                if (!value.matches("\\d{4}-\\d{2}-\\d{2}")) {
-                    throw new IllegalArgumentException(
-                            "Valor inválido para tipo DATE: '" + value + "'. Esperado: formato ISO-8601 (yyyy-MM-dd).");
-                }
-            }
-            case SINGLE_CHOICE -> {
-                if (item.getOptionsJson() == null || item.getOptionsJson().isBlank()) {
-                    throw new IllegalArgumentException(
-                            "Item do tipo SINGLE_CHOICE não possui opções configuradas.");
-                }
-                // Valida apenas que o valor foi informado — validação das opções do JSON
-                // pode ser expandida futuramente sem quebrar o contrato
-            }
-            // TEXT_SHORT e TEXT_LONG aceitam qualquer string — sem validação adicional
-            default -> { }
-        }
+        ResponseValueValidator.validate(item, value);
     }
 
     /**
