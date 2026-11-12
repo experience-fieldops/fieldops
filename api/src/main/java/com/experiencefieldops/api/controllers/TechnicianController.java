@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.experiencefieldops.api.dto.TechnicianMetricsResponse;
+import com.experiencefieldops.api.security.CurrentUserService;
 import com.experiencefieldops.api.services.InspectionService;
 import com.experiencefieldops.api.util.ApiResponse;
 
@@ -21,15 +22,15 @@ import lombok.RequiredArgsConstructor;
 public class TechnicianController {
 
     private final InspectionService inspectionService;
+    private final CurrentUserService currentUser;
 
     /**
      * GET /api/v1/technicians/{id}/metrics
-     * shortcut: qualquer usuário autenticado consulta qualquer técnico, como em /inspections/assigned;
-     * restringir ao próprio técnico quando o usuário vier do JWT (B-08).
+     * TECNICO só consulta as próprias métricas; ADMIN/SUPERVISOR qualquer técnico (B-08).
      */
     @GetMapping("/{id}/metrics")
     @Operation(summary = "Métricas do técnico (concluídas, % aprovação, devolvidas)")
     public ResponseEntity<ApiResponse<TechnicianMetricsResponse>> getMetrics(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.success(inspectionService.getTechnicianMetrics(id)));
+        return ResponseEntity.ok(ApiResponse.success(inspectionService.getTechnicianMetrics(currentUser.technicianId(id))));
     }
 }
