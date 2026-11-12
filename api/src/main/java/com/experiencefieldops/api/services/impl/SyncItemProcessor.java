@@ -73,7 +73,7 @@ public class SyncItemProcessor {
                         return SyncItemResult.skipped(
                                 item.getIdempotencyKey(),
                                 item.getInspectionId(),
-                                item.getOperationType());
+                                item.getOperationType(), existing.getEntityId());
                     }
                     // Se estava FAILED, tenta novamente
                     return execute(item, existing, technicianId);
@@ -117,16 +117,17 @@ public class SyncItemProcessor {
             legacyOp.setInspectionId(item.getInspectionId());
             legacyOp.setOperationType(item.getOperationType());
             legacyOp.setPayload(item.getPayload());
-            dispatch(legacyOp, technicianId);
+            Long entityId = dispatch(legacyOp, technicianId);
 
             entry.setStatus(SyncStatus.SUCCESS);
+            entry.setEntityId(entityId);
             entry.setErrorMessage(null);
             outboxRepository.save(entry);
 
             return SyncItemResult.success(
                     item.getIdempotencyKey(),
                     item.getInspectionId(),
-                    item.getOperationType());
+                    item.getOperationType(), entityId);
 
         } catch (Exception e) {
             log.warn("Sync falhou [key={}] [type={}]: {}",
@@ -147,33 +148,35 @@ public class SyncItemProcessor {
         }
     }
 
-    private void dispatch(SyncOperationRequest op, Long technicianId) throws Exception {
-        switch (op.getOperationType()) {
+    /** Executa a operação e devolve o id da entidade criada/afetada (B-11). */
+    private Long dispatch(SyncOperationRequest op, Long technicianId) throws Exception {
+        return switch (op.getOperationType()) {
             case START_INSPECTION -> {
                 InspectionStartRequest req = objectMapper.readValue(
                         op.getPayload(), InspectionStartRequest.class);
-                inspectionService.start(op.getInspectionId(), req, technicianId);
+                yield inspectionService.start(op.getInspectionId(), req, technicianId).getId();
             }
             case SAVE_RESPONSE -> {
                 ResponseRequest req = objectMapper.readValue(
                         op.getPayload(), ResponseRequest.class);
-                responseService.save(op.getInspectionId(), req);
+                yield responseService.save(op.getInspectionId(), req).getId();
             }
             case SAVE_NON_CONFORMITY -> {
                 NonConformityRequest req = objectMapper.readValue(
                         op.getPayload(), NonConformityRequest.class);
-                nonConformityService.create(op.getInspectionId(), req);
+                yield nonConformityService.create(op.getInspectionId(), req).getId();
             }
             case UPLOAD_EVIDENCE -> {
                 log.info("UPLOAD_EVIDENCE rastreado na outbox — arquivo enviado via endpoint dedicado");
+                yield null;
             }
             case COMPLETE_INSPECTION -> {
                 InspectionCompleteRequest req = objectMapper.readValue(
                         op.getPayload(), InspectionCompleteRequest.class);
-                inspectionService.complete(op.getInspectionId(), req, technicianId);
+                yield inspectionService.complete(op.getInspectionId(), req, technicianId).getId();
             }
             default -> throw new IllegalArgumentException(
                     "Tipo de operação desconhecido: " + op.getOperationType());
-        }
+        };
     }
 }

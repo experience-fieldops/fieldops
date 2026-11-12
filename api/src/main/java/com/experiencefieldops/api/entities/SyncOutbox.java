@@ -73,6 +73,9 @@ public class SyncOutbox {
     @Column
     private LocalDateTime processedAt;
 
+    // Id da entidade criada pela operação (resposta, NC, inspeção) — devolvido ao app (B-11)
+    private Long entityId;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
