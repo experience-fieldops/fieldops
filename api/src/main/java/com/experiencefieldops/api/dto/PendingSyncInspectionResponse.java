@@ -19,6 +19,7 @@ import lombok.Getter;
 public class PendingSyncInspectionResponse {
 
     private Long id;
+    private String code;
     private String clientName;
     private String siteName;
     private String siteAddress;
@@ -36,6 +37,7 @@ public class PendingSyncInspectionResponse {
             List<TemplateSectionResponse> sections) {
         return PendingSyncInspectionResponse.builder()
                 .id(inspection.getId())
+                .code(inspection.getCode())
                 .clientName(inspection.getClient().getName())
                 .siteName(inspection.getSite().getName())
                 .siteAddress(inspection.getSite().getAddress())

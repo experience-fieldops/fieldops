@@ -5,16 +5,18 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.experiencefieldops.api.entities.Inspection;
+import com.experiencefieldops.api.enums.InspectionPriority;
 import com.experiencefieldops.api.enums.InspectionStatus;
 
 import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-@Builder
+@Builder(toBuilder = true)
 public class InspectionResponse {
 
     private Long id;
+    private String code;
     private Long clientId;
     private String clientName;
     private Long siteId;
@@ -29,6 +31,7 @@ public class InspectionResponse {
     private String equipmentName;
     private LocalDate scheduledDate;
     private InspectionStatus status;
+    private InspectionPriority priority;
     private LocalDateTime startedAtDevice;
     private LocalDateTime startedAtServer;
     private LocalDateTime completedAtDevice;
@@ -46,6 +49,7 @@ public class InspectionResponse {
     public static InspectionResponse from(Inspection inspection) {
         return InspectionResponse.builder()
                 .id(inspection.getId())
+                .code(inspection.getCode())
                 .clientId(inspection.getClient().getId())
                 .clientName(inspection.getClient().getName())
                 .siteId(inspection.getSite().getId())
@@ -61,6 +65,7 @@ public class InspectionResponse {
                 .equipmentName(inspection.getEquipment() != null ? inspection.getEquipment().getName() : null)
                 .scheduledDate(inspection.getScheduledDate())
                 .status(inspection.getStatus())
+                .priority(inspection.getPriority() != null ? inspection.getPriority() : InspectionPriority.MEDIUM)
                 .startedAtDevice(inspection.getStartedAtDevice())
                 .startedAtServer(inspection.getStartedAtServer())
                 .completedAtDevice(inspection.getCompletedAtDevice())
@@ -75,34 +80,6 @@ public class InspectionResponse {
     }
 
     public static InspectionResponse from(Inspection inspection, List<InspectionItemSnapshotResponse> itemSnapshots) {
-        InspectionResponse response = from(inspection);
-        return InspectionResponse.builder()
-                .id(response.getId())
-                .clientId(response.getClientId())
-                .clientName(response.getClientName())
-                .siteId(response.getSiteId())
-                .siteName(response.getSiteName())
-                .assignedToId(response.getAssignedToId())
-                .assignedToName(response.getAssignedToName())
-                .templateVersionId(response.getTemplateVersionId())
-                .templateVersionNumber(response.getTemplateVersionNumber())
-                .templateTitle(response.getTemplateTitle())
-                .estimatedMinutes(response.getEstimatedMinutes())
-                .equipmentId(response.getEquipmentId())
-                .equipmentName(response.getEquipmentName())
-                .scheduledDate(response.getScheduledDate())
-                .status(response.getStatus())
-                .startedAtDevice(response.getStartedAtDevice())
-                .startedAtServer(response.getStartedAtServer())
-                .completedAtDevice(response.getCompletedAtDevice())
-                .completedAtServer(response.getCompletedAtServer())
-                .cancelledById(response.getCancelledById())
-                .cancelledAt(response.getCancelledAt())
-                .cancellationReason(response.getCancellationReason())
-                .version(response.getVersion())
-                .createdAt(response.getCreatedAt())
-                .updatedAt(response.getUpdatedAt())
-                .itemSnapshots(itemSnapshots)
-                .build();
+        return from(inspection).toBuilder().itemSnapshots(itemSnapshots).build();
     }
 }

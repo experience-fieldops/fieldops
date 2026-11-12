@@ -3,6 +3,7 @@ package com.experiencefieldops.api.entities;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.experiencefieldops.api.enums.InspectionPriority;
 import com.experiencefieldops.api.enums.InspectionStatus;
 
 import jakarta.persistence.Column;
@@ -72,6 +73,11 @@ public class Inspection {
     @Column(nullable = false, length = 15)
     private InspectionStatus status;
 
+    // Nullable no banco: linhas antigas (antes do B-02) ficam null e saem como MEDIUM na API
+    @Enumerated(EnumType.STRING)
+    @Column(length = 10)
+    private InspectionPriority priority;
+
     // ── Execução (RN-034) ─────────────────────────────────────────────────
     // Data/hora capturada no dispositivo do técnico
     @Column
@@ -112,4 +118,15 @@ public class Inspection {
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * Código amigável (B-04), derivado sem coluna: INSP-{ano de criação}-{id com 3+ dígitos}.
+     * Ex.: INSP-2026-007. Único porque o id é único; o número não reinicia a cada ano.
+     */
+    public String getCode() {
+        if (id == null) return null;
+        Integer year = createdAt != null ? Integer.valueOf(createdAt.getYear())
+                : scheduledDate != null ? Integer.valueOf(scheduledDate.getYear()) : null;
+        return year == null ? null : String.format("INSP-%d-%03d", year, id);
+    }
 }

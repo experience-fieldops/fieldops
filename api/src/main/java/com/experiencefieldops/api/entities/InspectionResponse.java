@@ -56,7 +56,7 @@ public class InspectionResponse {
      *   TEXT_SHORT / TEXT_LONG → texto livre
      *   NUMBER                 → número decimal (ex: "3.14")
      *   BOOLEAN                → "true" / "false"
-     *   CONFORMITY             → CONFORMING / NON_CONFORMING / NOT_APPLICABLE
+     *   CONFORMITY             → CONFORMING / ATTENTION / NON_CONFORMING / NOT_VERIFIED
      *   SINGLE_CHOICE          → chave da opção escolhida
      *   DATE                   → ISO-8601 (ex: "2026-09-14")
      */

@@ -28,6 +28,7 @@ import com.experiencefieldops.api.entities.User;
 import com.experiencefieldops.api.enums.AuditAction;
 import com.experiencefieldops.api.enums.ClientStatus;
 import com.experiencefieldops.api.enums.EquipmentStatus;
+import com.experiencefieldops.api.enums.InspectionPriority;
 import com.experiencefieldops.api.enums.InspectionStatus;
 import com.experiencefieldops.api.enums.SiteStatus;
 import com.experiencefieldops.api.exception.ConflictException;
@@ -78,6 +79,7 @@ public class InspectionServiceImpl implements InspectionService {
                 .client(client).site(site).assignedTo(technician)
                 .templateVersion(templateVersion).equipment(equipment)
                 .scheduledDate(request.getScheduledDate())
+                .priority(request.getPriority() != null ? request.getPriority() : InspectionPriority.MEDIUM)
                 .status(InspectionStatus.SCHEDULED)
                 .build();
 
