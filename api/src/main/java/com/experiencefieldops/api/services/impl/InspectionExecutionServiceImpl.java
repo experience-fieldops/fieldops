@@ -20,6 +20,7 @@ import com.experiencefieldops.api.entities.User;
 import com.experiencefieldops.api.enums.ConformityValue;
 import com.experiencefieldops.api.enums.ExecutionStatus;
 import com.experiencefieldops.api.enums.InspectionStatus;
+import com.experiencefieldops.api.enums.NonConformityStatus;
 import com.experiencefieldops.api.enums.ResponseType;
 import com.experiencefieldops.api.enums.UserRole;
 import com.experiencefieldops.api.exception.ConflictException;
@@ -41,6 +42,7 @@ public class InspectionExecutionServiceImpl implements InspectionExecutionServic
     private final InspectionExecutionRepository executionRepository;
     private final ChecklistResponseRepository checklistResponseRepository;
     private final InspectionRepository inspectionRepository;
+    private final com.experiencefieldops.api.repositories.NonConformityRepository nonConformityRepository;
     private final InspectionItemSnapshotRepository snapshotRepository;
     private final UserRepository userRepository;
 
@@ -124,6 +126,9 @@ public class InspectionExecutionServiceImpl implements InspectionExecutionServic
         // Atualiza a inspeção para COMPLETED
         Inspection inspection = saved.getInspection();
         if (inspection.getStatus() == InspectionStatus.IN_PROGRESS) {
+            if (nonConformityRepository.existsByInspectionIdAndStatus(inspection.getId(), NonConformityStatus.PENDING_EVIDENCE)) {
+                throw new ConflictException("Existe não conformidade crítica sem evidência; anexe uma evidência antes de concluir (RN-055)");
+            }
             inspection.setStatus(InspectionStatus.COMPLETED);
             inspection.setCompletedAtServer(saved.getCompletedAt());
             inspectionRepository.save(inspection);

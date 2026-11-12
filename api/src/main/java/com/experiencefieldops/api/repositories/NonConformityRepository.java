@@ -11,5 +11,7 @@ public interface NonConformityRepository extends JpaRepository<NonConformity, Lo
 
     List<NonConformity> findByInspectionIdOrderByCreatedAtDesc(Long inspectionId);
 
+    boolean existsByInspectionIdAndStatus(Long inspectionId, com.experiencefieldops.api.enums.NonConformityStatus status);
+
     Optional<NonConformity> findByIdAndInspectionId(Long id, Long inspectionId);
 }

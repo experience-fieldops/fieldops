@@ -76,6 +76,11 @@ public class EvidenceServiceImpl implements EvidenceService {
                 .build();
 
         Evidence saved = evidenceRepository.save(evidence);
+        if (nonConformity != null) {
+            nonConformity.setEvidenceAttached(true);
+            nonConformity.applyEvidenceRule();
+            ncRepository.save(nonConformity);
+        }
 
         auditLogService.log(uploadedByUserId, null, AuditAction.UPLOAD,
                 "Evidence", saved.getId(),
@@ -118,6 +123,12 @@ public class EvidenceServiceImpl implements EvidenceService {
         evidence.setDeletedBy(deletedBy);
         evidence.setDeletionReason(reason);
         evidenceRepository.save(evidence);
+        NonConformity nc = evidence.getNonConformity();
+        if (nc != null) {
+            nc.setEvidenceAttached(evidenceRepository.existsByNonConformityIdAndDeletedAtIsNull(nc.getId()));
+            nc.applyEvidenceRule();
+            ncRepository.save(nc);
+        }
 
         storageService.delete(evidence.getFileKey());
 

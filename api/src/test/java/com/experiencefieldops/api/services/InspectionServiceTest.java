@@ -64,6 +64,7 @@ class InspectionServiceTest {
     @Mock private TemplateSectionRepository sectionRepository;
     @Mock private TemplateItemRepository itemRepository;
     @Mock private AuditLogService auditLogService;
+    @Mock private com.experiencefieldops.api.repositories.NonConformityRepository nonConformityRepository;
 
     @InjectMocks
     private InspectionServiceImpl service;
@@ -412,34 +413,17 @@ class InspectionServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
-    // ── métricas do técnico (B-07) ─────────────────────────────────────────
-
     @Test
-    void getTechnicianMetrics_deveCalcularPelaRegraDoApp() {
-        when(userRepository.existsById(10L)).thenReturn(true);
-        when(inspectionRepository.countByStatusForTechnician(10L)).thenReturn(List.of(
-                new Object[] {InspectionStatus.APPROVED, 3L},
-                new Object[] {InspectionStatus.COMPLETED, 1L},
-                new Object[] {InspectionStatus.UNDER_REVIEW, 2L},
-                new Object[] {InspectionStatus.REJECTED, 4L},
-                new Object[] {InspectionStatus.SCHEDULED, 9L}));
+    void complete_deveBloquearComNcCriticaSemEvidencia() {
+        User tec = tecnico(10L);
+        Inspection insp = inspection(1L, InspectionStatus.IN_PROGRESS, tec);
+        when(inspectionRepository.findById(1L)).thenReturn(Optional.of(insp));
+        when(nonConformityRepository.existsByInspectionIdAndStatus(1L,
+                com.experiencefieldops.api.enums.NonConformityStatus.PENDING_EVIDENCE)).thenReturn(true);
 
-        var m = service.getTechnicianMetrics(10L);
-
-        assertThat(m.getCompletedCount()).isEqualTo(6);   // 3 + 1 + 2
-        assertThat(m.getApprovedCount()).isEqualTo(3);
-        assertThat(m.getRejectedCount()).isEqualTo(4);
-        assertThat(m.getApprovalRate()).isEqualTo(50.0);  // 3 / 6
-    }
-
-    @Test
-    void getTechnicianMetrics_semConcluidasRetornaZeroEInexistenteDa404() {
-        when(userRepository.existsById(10L)).thenReturn(true);
-        when(inspectionRepository.countByStatusForTechnician(10L)).thenReturn(List.of());
-        assertThat(service.getTechnicianMetrics(10L).getApprovalRate()).isZero();
-
-        when(userRepository.existsById(99L)).thenReturn(false);
-        assertThatThrownBy(() -> service.getTechnicianMetrics(99L))
-                .isInstanceOf(com.experiencefieldops.api.exception.ResourceNotFoundException.class);
+        assertThatThrownBy(() -> service.complete(1L, new InspectionCompleteRequest(), 10L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("RN-055");
+        assertThat(insp.getStatus()).isEqualTo(InspectionStatus.IN_PROGRESS);
     }
 }

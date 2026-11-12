@@ -86,4 +86,17 @@ public class NonConformity {
     @LastModifiedDate
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    /**
+     * RN-055 (B-10): NC crítica sem evidência fica PENDING_EVIDENCE; com evidência (ou deixando de ser crítica) volta a OPEN.
+     * evidenceAttached é mantido pelo backend a partir das evidências vinculadas.
+     */
+    public void applyEvidenceRule() {
+        boolean hasEvidence = Boolean.TRUE.equals(evidenceAttached);
+        if (status == NonConformityStatus.OPEN && severity == Severity.CRITICAL && !hasEvidence) {
+            status = NonConformityStatus.PENDING_EVIDENCE;
+        } else if (status == NonConformityStatus.PENDING_EVIDENCE && (severity != Severity.CRITICAL || hasEvidence)) {
+            status = NonConformityStatus.OPEN;
+        }
+    }
 }

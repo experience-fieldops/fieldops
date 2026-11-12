@@ -38,19 +38,21 @@ public class NonConformityServiceImpl implements NonConformityService {
     public NonConformityResponse create(Long inspectionId, NonConformityRequest request) {
         Inspection inspection = findEditableInspection(inspectionId);
 
-        validateCritical(request.getSeverity(), request.getDescription(), request.getEvidenceAttached());
+        validateCritical(request.getSeverity(), request.getDescription());
 
         InspectionItemSnapshot snapshotItem = resolveSnapshotItem(inspectionId, request.getSnapshotItemId());
 
+        // evidenceAttached nasce false: as evidências são enviadas depois, vinculadas à NC (B-10)
         NonConformity nc = NonConformity.builder()
                 .inspection(inspection)
                 .snapshotItem(snapshotItem)
-                .title(request.getTitle())
+                .title(resolveTitle(request.getTitle(), snapshotItem))
                 .description(request.getDescription())
                 .severity(request.getSeverity())
                 .status(NonConformityStatus.OPEN)
-                .evidenceAttached(Boolean.TRUE.equals(request.getEvidenceAttached()))
+                .evidenceAttached(false)
                 .build();
+        nc.applyEvidenceRule();
 
         return NonConformityResponse.from(ncRepository.save(nc));
     }
@@ -77,16 +79,16 @@ public class NonConformityServiceImpl implements NonConformityService {
         NonConformity nc = findNc(id);
         assertEditable(nc);
 
-        validateCritical(request.getSeverity(), request.getDescription(), request.getEvidenceAttached());
+        validateCritical(request.getSeverity(), request.getDescription());
 
         InspectionItemSnapshot snapshotItem = resolveSnapshotItem(
                 nc.getInspection().getId(), request.getSnapshotItemId());
 
-        nc.setTitle(request.getTitle());
+        nc.setTitle(resolveTitle(request.getTitle(), snapshotItem));
         nc.setDescription(request.getDescription());
         nc.setSeverity(request.getSeverity());
         nc.setSnapshotItem(snapshotItem);
-        nc.setEvidenceAttached(Boolean.TRUE.equals(request.getEvidenceAttached()));
+        nc.applyEvidenceRule(); // severidade pode ter mudado de/para CRITICAL
 
         return NonConformityResponse.from(ncRepository.save(nc));
     }
@@ -114,25 +116,28 @@ public class NonConformityServiceImpl implements NonConformityService {
         }
 
         nc.setStatus(request.getStatus());
+        nc.applyEvidenceRule(); // OPEN manual em crítica sem evidência volta a PENDING_EVIDENCE
         return NonConformityResponse.from(ncRepository.save(nc));
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────
 
     /**
-     * NC crítica exige descrição e evidência (RN-055).
+     * NC crítica exige descrição (RN-055). A exigência de evidência é aplicada pelo status
+     * PENDING_EVIDENCE, que bloqueia RESOLVED e a conclusão da inspeção.
      */
-    private void validateCritical(Severity severity, String description, Boolean evidenceAttached) {
-        if (severity == Severity.CRITICAL) {
-            if (description == null || description.isBlank()) {
-                throw new IllegalArgumentException(
-                        "Não conformidade crítica exige descrição obrigatória (RN-055)");
-            }
-            if (!Boolean.TRUE.equals(evidenceAttached)) {
-                throw new IllegalArgumentException(
-                        "Não conformidade crítica exige ao menos uma evidência (RN-055)");
-            }
+    private void validateCritical(Severity severity, String description) {
+        if (severity == Severity.CRITICAL && (description == null || description.isBlank())) {
+            throw new IllegalArgumentException(
+                    "Não conformidade crítica exige descrição obrigatória (RN-055)");
         }
+    }
+
+    /** Título informado ou, se vazio, o título do item do checklist (B-10). */
+    private String resolveTitle(String title, InspectionItemSnapshot snapshotItem) {
+        if (title != null && !title.isBlank()) return title;
+        if (snapshotItem != null) return snapshotItem.getTitle();
+        throw new IllegalArgumentException("Título é obrigatório quando a NC não está vinculada a um item do checklist");
     }
 
     /**

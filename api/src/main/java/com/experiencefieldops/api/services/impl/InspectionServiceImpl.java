@@ -33,6 +33,7 @@ import com.experiencefieldops.api.enums.ClientStatus;
 import com.experiencefieldops.api.enums.EquipmentStatus;
 import com.experiencefieldops.api.enums.InspectionPriority;
 import com.experiencefieldops.api.enums.InspectionStatus;
+import com.experiencefieldops.api.enums.NonConformityStatus;
 import com.experiencefieldops.api.enums.SiteStatus;
 import com.experiencefieldops.api.exception.ConflictException;
 import com.experiencefieldops.api.exception.ResourceNotFoundException;
@@ -55,6 +56,7 @@ import lombok.RequiredArgsConstructor;
 public class InspectionServiceImpl implements InspectionService {
 
     private final InspectionRepository inspectionRepository;
+    private final com.experiencefieldops.api.repositories.NonConformityRepository nonConformityRepository;
     private final InspectionItemSnapshotRepository snapshotRepository;
     private final ClientRepository clientRepository;
     private final InspectionSiteRepository siteRepository;
@@ -185,6 +187,10 @@ public class InspectionServiceImpl implements InspectionService {
         }
         if (!inspection.getAssignedTo().getId().equals(requestingUserId)) {
             throw new ConflictException("Somente o técnico responsável pode concluir a inspeção (RN-033)");
+        }
+
+        if (nonConformityRepository.existsByInspectionIdAndStatus(inspection.getId(), NonConformityStatus.PENDING_EVIDENCE)) {
+            throw new ConflictException("Existe não conformidade crítica sem evidência; anexe uma evidência antes de concluir (RN-055)");
         }
 
         inspection.setStatus(InspectionStatus.COMPLETED);
