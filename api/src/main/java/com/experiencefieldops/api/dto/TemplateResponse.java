@@ -16,6 +16,7 @@ public class TemplateResponse {
     private String title;
     private String description;
     private String category;
+    private Integer estimatedMinutes;
     private TemplateStatus status;
     private Integer currentVersion;
     private Long version;
@@ -28,6 +29,7 @@ public class TemplateResponse {
                 .title(template.getTitle())
                 .description(template.getDescription())
                 .category(template.getCategory())
+                .estimatedMinutes(template.getEstimatedMinutes())
                 .status(template.getStatus())
                 .currentVersion(template.getCurrentVersion())
                 .version(template.getVersion())

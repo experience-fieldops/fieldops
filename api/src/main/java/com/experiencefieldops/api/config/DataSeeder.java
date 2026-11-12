@@ -299,6 +299,7 @@ public class DataSeeder implements ApplicationRunner {
                 .title("Inspeção de Compressores")
                 .description("Checklist para inspeção de compressores industriais")
                 .category("MECANICO")
+                .estimatedMinutes(45)
                 .status(TemplateStatus.ACTIVE)
                 .currentVersion(0)
                 .build());
@@ -309,6 +310,7 @@ public class DataSeeder implements ApplicationRunner {
                 .title("Inspeção Elétrica Geral")
                 .description("Checklist de inspeção de painéis elétricos e geradores")
                 .category("ELETRICO")
+                .estimatedMinutes(60)
                 .status(TemplateStatus.ACTIVE)
                 .currentVersion(0)
                 .build());
@@ -319,6 +321,7 @@ public class DataSeeder implements ApplicationRunner {
                 .title("Inspeção de Segurança do Trabalho")
                 .description("Checklist de itens de segurança e EPIs")
                 .category("SEGURANCA")
+                .estimatedMinutes(30)
                 .status(TemplateStatus.ACTIVE)
                 .currentVersion(0)
                 .build());
